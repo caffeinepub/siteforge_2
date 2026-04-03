@@ -405,6 +405,8 @@ actor {
   };
 
   public shared ({ caller }) func updateDisplayName(displayName : Text) : async () {
+    // Auto-register user if needed (handles race conditions with recordLogin)
+    ensureUserRegistered(caller);
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can update profiles");
     };
@@ -424,6 +426,8 @@ actor {
   };
 
   public shared ({ caller }) func updateUsername(username : Text) : async () {
+    // Auto-register user if needed (handles race conditions with recordLogin)
+    ensureUserRegistered(caller);
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can update profiles");
     };
@@ -443,6 +447,8 @@ actor {
   };
 
   public shared ({ caller }) func createProfile(username : Text, displayName : Text, bio : Text) : async () {
+    // Auto-register user if needed (handles race conditions with recordLogin)
+    ensureUserRegistered(caller);
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can create profiles");
     };
@@ -472,6 +478,8 @@ actor {
   };
 
   public shared ({ caller }) func updateBio(bio : Text) : async () {
+    // Auto-register user if needed (handles race conditions with recordLogin)
+    ensureUserRegistered(caller);
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can update profiles");
     };

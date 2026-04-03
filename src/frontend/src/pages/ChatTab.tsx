@@ -319,8 +319,29 @@ function PhonePayDialog({
       setEnteredPIN("");
       return;
     }
-    setStep("done");
-    toast.success(`Payment of ₹${amountINR} initiated to ${recipientName}!`);
+
+    // Build UPI deep link — opens PhonePe (or any UPI app) with details pre-filled
+    // recipientPhonePe is the recipient's UPI ID / mobile@upi registered with PhonePe
+    const recipientUPI = recipientPhonePe
+      ? recipientPhonePe.includes("@")
+        ? recipientPhonePe
+        : `${recipientPhonePe}@ybl` // PhonePe VPA format
+      : "";
+
+    if (recipientUPI) {
+      const note = encodeURIComponent(`SiteForge payment to ${recipientName}`);
+      const name = encodeURIComponent(recipientName);
+      const upiLink = `upi://pay?pa=${encodeURIComponent(recipientUPI)}&pn=${name}&am=${recipientReceives.toFixed(2)}&cu=INR&tn=${note}`;
+      // Open UPI deep link — on mobile this launches PhonePe/GPay/BHIM; on desktop shows QR
+      window.location.href = upiLink;
+      setTimeout(() => setStep("done"), 300);
+    } else {
+      // No UPI linked for recipient — show done with instruction
+      setStep("done");
+    }
+    toast.success(
+      `Payment of ₹${recipientReceives.toFixed(2)} to ${recipientName} initiated via PhonePe!`,
+    );
   };
 
   // Purple gradient header — always visible
@@ -532,21 +553,52 @@ function PhonePayDialog({
               </motion.div>
               <div>
                 <p className="font-bold text-gray-800 text-lg">
-                  Payment Initiated!
+                  Opening PhonePe...
                 </p>
                 <p className="text-sm text-gray-500 mt-1">
-                  Open PhonePe app to complete payment of ₹{amountINR} to{" "}
-                  <span className="font-mono font-semibold text-gray-700">
-                    {recipientPhonePe || recipientName}
+                  Paying ₹{recipientReceives.toFixed(2)} to{" "}
+                  <span className="font-semibold text-gray-700">
+                    {recipientName}
                   </span>
+                  {recipientPhonePe ? (
+                    <span className="block font-mono text-xs mt-0.5 text-gray-400">
+                      {recipientPhonePe.includes("@")
+                        ? recipientPhonePe
+                        : `${recipientPhonePe}@ybl`}
+                    </span>
+                  ) : null}
                 </p>
               </div>
+              {recipientPhonePe ? (
+                <Button
+                  className="w-full bg-gradient-to-r from-[#5f259f] to-[#8b44d4] hover:opacity-90 text-white font-bold h-11"
+                  onClick={() => {
+                    const recipientUPI = recipientPhonePe.includes("@")
+                      ? recipientPhonePe
+                      : `${recipientPhonePe}@ybl`;
+                    const note = encodeURIComponent(
+                      `SiteForge payment to ${recipientName}`,
+                    );
+                    const name = encodeURIComponent(recipientName);
+                    window.location.href = `upi://pay?pa=${encodeURIComponent(recipientUPI)}&pn=${name}&am=${recipientReceives.toFixed(2)}&cu=INR&tn=${note}`;
+                  }}
+                  data-ocid="chat.phonepe_open.button"
+                >
+                  Open PhonePe to Pay
+                </Button>
+              ) : (
+                <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
+                  Ask {recipientName} to link their PhonePe UPI in their
+                  Settings so you can pay them directly.
+                </p>
+              )}
               <Button
-                className="w-full bg-gradient-to-r from-[#5f259f] to-[#8b44d4] hover:opacity-90 text-white font-bold h-11"
+                variant="outline"
+                className="w-full h-10 text-sm"
                 onClick={onClose}
                 data-ocid="chat.phonepe_done.button"
               >
-                Done
+                Close
               </Button>
             </motion.div>
           )}
