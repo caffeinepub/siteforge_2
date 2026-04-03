@@ -32,6 +32,7 @@ interface ListSiteModalProps {
 }
 
 type PaymentMethodId = "icp" | "paypal" | "phonepe" | "fampay" | "stripe";
+type PriceCurrency = "usd" | "inr";
 
 const ALL_PAYMENT_METHODS: {
   id: PaymentMethodId;
@@ -97,9 +98,10 @@ const ALL_PAYMENT_METHODS: {
 const USD_TO_INR = 83.5;
 // Platform PhonePe commission number
 const PLATFORM_PHONEPE = "9502010856";
+// Minimum price: ₹1 = ~$0.012
+const MIN_PRICE_INR = 1;
+const MIN_PRICE_USD = MIN_PRICE_INR / USD_TO_INR;
 
-// Key in localStorage to store seller payment account details
-// Format: siteforge:seller_accounts:{siteId} -> JSON
 export function saveSellerAccounts(
   siteId: string,
   methods: PaymentMethodId[],
@@ -135,12 +137,12 @@ export function ListSiteModal({
   open,
   onClose,
 }: ListSiteModalProps) {
+  const [priceCurrency, setPriceCurrency] = useState<PriceCurrency>("inr");
   const [priceInput, setPriceInput] = useState("");
   const [description, setDescription] = useState("");
   const [acceptedMethods, setAcceptedMethods] = useState<PaymentMethodId[]>([
     "stripe",
   ]);
-  // Account details per payment method
   const [accountDetails, setAccountDetails] = useState<
     Record<PaymentMethodId, string>
   >({
@@ -158,12 +160,15 @@ export function ListSiteModal({
     );
   };
 
-  const priceUsd = Number.parseFloat(priceInput) || 0;
-  const priceInr = priceUsd * USD_TO_INR;
+  // Derive USD and INR from whichever currency is active
+  const inputValue = Number.parseFloat(priceInput) || 0;
+  const priceUsd =
+    priceCurrency === "inr" ? inputValue / USD_TO_INR : inputValue;
+  const priceInr =
+    priceCurrency === "inr" ? inputValue : inputValue * USD_TO_INR;
   const commission = priceUsd * 0.01;
   const sellerReceives = priceUsd - commission;
 
-  // Check if all selected methods that require account have account filled
   const missingAccounts = ALL_PAYMENT_METHODS.filter(
     (m) =>
       m.hasAccount &&
@@ -173,8 +178,8 @@ export function ListSiteModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!priceUsd || priceUsd <= 0) {
-      toast.error("Please enter a valid price");
+    if (!priceUsd || priceUsd < MIN_PRICE_USD) {
+      toast.error(`Minimum listing price is ₹${MIN_PRICE_INR}`);
       return;
     }
     if (!description.trim()) {
@@ -198,7 +203,6 @@ export function ListSiteModal({
         price: priceInCents,
         listingDescription: description.trim(),
       });
-      // Save seller account details to localStorage so buyers can see them
       saveSellerAccounts(siteId, acceptedMethods, accountDetails);
       toast.success(`${siteTitle} listed on marketplace!`);
       onClose();
@@ -230,36 +234,116 @@ export function ListSiteModal({
 
           {/* Price */}
           <div className="space-y-1.5">
-            <Label htmlFor="price" className="text-foreground">
-              Listing Price
-            </Label>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="price"
-                  type="number"
-                  min="1"
-                  step="0.01"
-                  value={priceInput}
-                  onChange={(e) => setPriceInput(e.target.value)}
-                  placeholder="99.00"
-                  className="pl-9 bg-input border-border"
-                  data-ocid="list_site.input"
-                />
-              </div>
-              <div className="relative">
-                <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  readOnly
-                  value={priceInr > 0 ? priceInr.toFixed(0) : ""}
-                  placeholder="Auto-calculated"
-                  className="pl-9 bg-muted/30 border-border text-muted-foreground cursor-not-allowed"
-                />
+            <div className="flex items-center justify-between">
+              <Label htmlFor="price" className="text-foreground">
+                Listing Price
+              </Label>
+              {/* Currency toggle */}
+              <div className="flex rounded-md overflow-hidden border border-border text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (priceCurrency !== "inr") {
+                      // convert displayed value from USD to INR
+                      const usdVal = Number.parseFloat(priceInput) || 0;
+                      setPriceInput(
+                        usdVal > 0 ? (usdVal * USD_TO_INR).toFixed(0) : "",
+                      );
+                      setPriceCurrency("inr");
+                    }
+                  }}
+                  className={`px-3 py-1 font-medium transition-colors ${
+                    priceCurrency === "inr"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted/30 text-muted-foreground hover:bg-muted/60"
+                  }`}
+                >
+                  ₹ INR
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (priceCurrency !== "usd") {
+                      // convert displayed value from INR to USD
+                      const inrVal = Number.parseFloat(priceInput) || 0;
+                      setPriceInput(
+                        inrVal > 0 ? (inrVal / USD_TO_INR).toFixed(2) : "",
+                      );
+                      setPriceCurrency("usd");
+                    }
+                  }}
+                  className={`px-3 py-1 font-medium transition-colors ${
+                    priceCurrency === "usd"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted/30 text-muted-foreground hover:bg-muted/60"
+                  }`}
+                >
+                  $ USD
+                </button>
               </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              {/* Active input — editable */}
+              {priceCurrency === "inr" ? (
+                <div className="relative col-span-1">
+                  <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="price"
+                    type="number"
+                    min={MIN_PRICE_INR}
+                    step="1"
+                    value={priceInput}
+                    onChange={(e) => setPriceInput(e.target.value)}
+                    placeholder="e.g. 500"
+                    className="pl-9 bg-input border-border"
+                    data-ocid="list_site.input_inr"
+                  />
+                </div>
+              ) : (
+                <div className="relative col-span-1">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="price"
+                    type="number"
+                    min={MIN_PRICE_USD.toFixed(4)}
+                    step="0.01"
+                    value={priceInput}
+                    onChange={(e) => setPriceInput(e.target.value)}
+                    placeholder="e.g. 9.99"
+                    className="pl-9 bg-input border-border"
+                    data-ocid="list_site.input_usd"
+                  />
+                </div>
+              )}
+
+              {/* Converted value — read-only */}
+              {priceCurrency === "inr" ? (
+                <div className="relative col-span-1">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    readOnly
+                    value={priceUsd > 0 ? `$${priceUsd.toFixed(2)}` : ""}
+                    placeholder="USD (auto)"
+                    className="pl-9 bg-muted/30 border-border text-muted-foreground cursor-not-allowed"
+                  />
+                </div>
+              ) : (
+                <div className="relative col-span-1">
+                  <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    readOnly
+                    value={priceInr > 0 ? priceInr.toFixed(0) : ""}
+                    placeholder="INR (auto)"
+                    className="pl-9 bg-muted/30 border-border text-muted-foreground cursor-not-allowed"
+                  />
+                </div>
+              )}
+            </div>
             <p className="text-[11px] text-muted-foreground">
-              Enter USD price — INR shown auto-calculated (1 USD ≈ ₹83.5)
+              {priceCurrency === "inr"
+                ? "Enter price in ₹ Rupees — USD shown auto-calculated (1 USD ≈ ₹83.5). Minimum ₹1."
+                : "Enter price in $ USD — INR shown auto-calculated (1 USD ≈ ₹83.5). Minimum ₹1."}
             </p>
           </div>
 
@@ -269,16 +353,20 @@ export function ListSiteModal({
               <div className="flex justify-between text-muted-foreground">
                 <span>Listing price</span>
                 <span>
-                  ${priceUsd.toFixed(2)} / ₹{priceInr.toFixed(0)}
+                  ₹{priceInr.toFixed(0)} / ${priceUsd.toFixed(2)}
                 </span>
               </div>
               <div className="flex justify-between text-orange-400">
                 <span>Platform commission (1%)</span>
-                <span>− ${commission.toFixed(2)}</span>
+                <span>
+                  − ₹{(priceInr * 0.01).toFixed(0)} / ${commission.toFixed(2)}
+                </span>
               </div>
               <div className="flex justify-between font-semibold text-green-400 border-t border-border pt-1.5">
                 <span>You receive</span>
-                <span>${sellerReceives.toFixed(2)}</span>
+                <span>
+                  ₹{(priceInr * 0.99).toFixed(0)} / ${sellerReceives.toFixed(2)}
+                </span>
               </div>
               <p className="text-[10px] text-muted-foreground pt-0.5">
                 Commission is collected via PhonePe ({PLATFORM_PHONEPE})
@@ -322,7 +410,7 @@ export function ListSiteModal({
             )}
           </div>
 
-          {/* Account linking for selected methods that require it */}
+          {/* Account linking */}
           {selectedMethodObjects.length > 0 && (
             <div className="space-y-4 rounded-lg border border-border bg-muted/10 p-4">
               <div className="flex items-center gap-2">

@@ -136,6 +136,20 @@ actor {
     };
   };
 
+  // Auto-register caller as #user if not yet in the roles map.
+  // This prevents Runtime.trap from AccessControl.getUserRole for users
+  // who somehow missed the recordLogin call (race conditions, direct navigation, etc.)
+  func ensureUserRegistered(principal : Principal) {
+    if (principal.isAnonymous()) { return };
+    switch (accessControlState.userRoles.get(principal)) {
+      case (null) {
+        accessControlState.userRoles.add(principal, #user);
+        ensureProfileExists(principal);
+      };
+      case (?_) {};
+    };
+  };
+
   public shared ({ caller }) func recordLogin() : async () {
     if (caller.isAnonymous()) {
       Runtime.trap("Anonymous principals cannot record login");
@@ -164,6 +178,7 @@ actor {
   };
 
   public shared ({ caller }) func createSite(title : Text, description : Text, content : Text) : async Text {
+    ensureUserRegistered(caller);
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can create sites");
     };
@@ -183,6 +198,7 @@ actor {
   };
 
   public shared ({ caller }) func updateSite(id : Text, title : Text, description : Text, content : Text) : async () {
+    ensureUserRegistered(caller);
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can update sites");
     };
@@ -213,6 +229,7 @@ actor {
   };
 
   public shared ({ caller }) func publishSite(siteId : Text) : async Text {
+    ensureUserRegistered(caller);
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can publish sites");
     };
@@ -236,6 +253,7 @@ actor {
   };
 
   public shared ({ caller }) func listSite(id : Text, price : Nat, listingDescription : Text) : async () {
+    ensureUserRegistered(caller);
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can list sites");
     };
@@ -266,6 +284,7 @@ actor {
   };
 
   public shared ({ caller }) func unlistSite(siteId : Text) : async () {
+    ensureUserRegistered(caller);
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can unlist sites");
     };
