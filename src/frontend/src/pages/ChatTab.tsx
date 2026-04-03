@@ -10,13 +10,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
+  CheckCircle2,
+  IndianRupee,
   MessageCircle,
+  Phone,
   RefreshCw,
   Search,
   Send,
@@ -47,6 +51,31 @@ import {
   unfollowUser,
 } from "../lib/socialStore";
 
+const PLATFORM_PHONEPE = "9502010856";
+const COMMISSION_RATE = 0.01;
+
+// Storage key for user's linked PhonePe UPI
+function getPhonePeStorageKey(principal: string) {
+  return `siteforge:phonepe_upi:${principal}`;
+}
+
+function loadMyPhonePeUPI(principal: string): string {
+  return localStorage.getItem(getPhonePeStorageKey(principal)) ?? "";
+}
+
+function saveMyPhonePeUPI(principal: string, upi: string) {
+  localStorage.setItem(getPhonePeStorageKey(principal), upi);
+}
+
+/** Returns the number if the message text is purely a number (integer or decimal), else null */
+function extractPaymentAmount(text: string): number | null {
+  const trimmed = text.trim();
+  if (!/^\d+(\.\d+)?$/.test(trimmed)) return null;
+  const val = Number.parseFloat(trimmed);
+  if (!Number.isFinite(val) || val <= 0) return null;
+  return val;
+}
+
 function truncatePrincipal(p: string) {
   if (p.length <= 16) return p;
   return `${p.slice(0, 8)}...${p.slice(-4)}`;
@@ -71,6 +100,187 @@ function formatTimestamp(ts: bigint) {
   }
   return date.toLocaleDateString([], { month: "short", day: "numeric" });
 }
+
+// ─── PhonePe Pay Dialog ───────────────────────────────────────────────────────
+
+interface PhonePayDialogProps {
+  open: boolean;
+  onClose: () => void;
+  amountINR: number;
+  recipientName: string;
+  recipientPhonePe: string; // receiver's UPI (from their stored data)
+  myPrincipal: string;
+}
+
+function PhonePayDialog({
+  open,
+  onClose,
+  amountINR,
+  recipientName,
+  recipientPhonePe,
+  myPrincipal,
+}: PhonePayDialogProps) {
+  const [myUPI, setMyUPI] = useState(() => loadMyPhonePeUPI(myPrincipal));
+  const [step, setStep] = useState<"link" | "confirm" | "done">("link");
+
+  const commission = amountINR * COMMISSION_RATE;
+  const recipientReceives = amountINR - commission;
+
+  // Reset step when dialog opens
+  useEffect(() => {
+    if (open) {
+      setMyUPI(loadMyPhonePeUPI(myPrincipal));
+      setStep(loadMyPhonePeUPI(myPrincipal) ? "confirm" : "link");
+    }
+  }, [open, myPrincipal]);
+
+  const handleLink = () => {
+    if (!myUPI.trim()) {
+      toast.error("Enter your PhonePe UPI ID or mobile number first.");
+      return;
+    }
+    saveMyPhonePeUPI(myPrincipal, myUPI.trim());
+    setStep("confirm");
+  };
+
+  const handlePay = () => {
+    saveMyPhonePeUPI(myPrincipal, myUPI.trim());
+    setStep("done");
+    toast.success(`Payment of ₹${amountINR} initiated to ${recipientName}!`);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent
+        className="bg-card border-border max-w-sm"
+        data-ocid="chat.phonepe_pay.dialog"
+      >
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-foreground">
+            <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
+              <Phone className="w-4 h-4 text-purple-400" />
+            </div>
+            Pay via PhonePe
+          </DialogTitle>
+          <DialogDescription className="text-muted-foreground">
+            Send ₹{amountINR} to {recipientName}
+          </DialogDescription>
+        </DialogHeader>
+
+        {step === "done" ? (
+          <div className="py-6 text-center space-y-3">
+            <div className="w-14 h-14 rounded-full bg-green-500/15 flex items-center justify-center mx-auto">
+              <CheckCircle2 className="w-8 h-8 text-green-400" />
+            </div>
+            <p className="font-semibold text-foreground">Payment Initiated!</p>
+            <p className="text-sm text-muted-foreground">
+              Open your PhonePe app and complete the payment of ₹{amountINR} to{" "}
+              <span className="font-mono text-foreground">
+                {recipientPhonePe || "the recipient's UPI"}
+              </span>
+              .
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              1% platform fee (₹{commission.toFixed(2)}) collected via PhonePe{" "}
+              {PLATFORM_PHONEPE}
+            </p>
+            <Button
+              className="w-full bg-primary hover:bg-primary/90"
+              onClick={onClose}
+            >
+              Done
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-4 py-1">
+            {/* Amount breakdown */}
+            <div className="rounded-lg border border-border bg-muted/20 p-3 text-xs space-y-1.5">
+              <div className="flex justify-between text-muted-foreground">
+                <span>Amount</span>
+                <span className="font-semibold text-foreground flex items-center gap-1">
+                  <IndianRupee className="w-3 h-3" />
+                  {amountINR}
+                </span>
+              </div>
+              <div className="flex justify-between text-orange-400">
+                <span>Platform fee (1%)</span>
+                <span>− ₹{commission.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between font-semibold text-green-400 border-t border-border pt-1.5">
+                <span>{recipientName} receives</span>
+                <span>₹{recipientReceives.toFixed(2)}</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                Fee collected via PhonePe {PLATFORM_PHONEPE}
+              </p>
+            </div>
+
+            {/* Recipient PhonePe */}
+            {recipientPhonePe && (
+              <div className="rounded-lg border border-purple-500/30 bg-purple-500/10 p-3 text-sm">
+                <p className="text-[11px] text-muted-foreground mb-1">
+                  Pay to (Recipient UPI)
+                </p>
+                <p className="font-mono font-semibold text-foreground">
+                  {recipientPhonePe}
+                </p>
+              </div>
+            )}
+
+            {/* My UPI */}
+            <div className="space-y-1.5">
+              <Label className="text-foreground text-xs">
+                Your PhonePe UPI / Mobile Number
+              </Label>
+              <Input
+                value={myUPI}
+                onChange={(e) => setMyUPI(e.target.value)}
+                placeholder="e.g. 9876543210 or yourname@ybl"
+                className="bg-input border-border text-sm h-9"
+                data-ocid="chat.phonepe_pay.upi_input"
+              />
+              <p className="text-[10px] text-muted-foreground">
+                Your UPI is saved locally for future payments.
+              </p>
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button
+                variant="outline"
+                onClick={onClose}
+                className="border-border"
+              >
+                Cancel
+              </Button>
+              {step === "link" ? (
+                <Button
+                  onClick={handleLink}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                  disabled={!myUPI.trim()}
+                  data-ocid="chat.phonepe_pay.link_button"
+                >
+                  <Phone className="w-4 h-4 mr-2" />
+                  Link & Continue
+                </Button>
+              ) : (
+                <Button
+                  onClick={handlePay}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                  data-ocid="chat.phonepe_pay.pay_button"
+                >
+                  <Phone className="w-4 h-4 mr-2" />
+                  Pay ₹{amountINR}
+                </Button>
+              )}
+            </DialogFooter>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── UserRow ─────────────────────────────────────────────────────────────────
 
 interface UserRowProps {
   entry: UserDirectoryEntry;
@@ -173,6 +383,8 @@ function UserRow({
     </button>
   );
 }
+
+// ─── ProposeTradeModal ────────────────────────────────────────────────────────
 
 interface ProposeTradeModalProps {
   open: boolean;
@@ -287,6 +499,8 @@ function ProposeTradeModal({
   );
 }
 
+// ─── ChatWindow ───────────────────────────────────────────────────────────────
+
 interface ChatWindowProps {
   partner: UserDirectoryEntry;
   myPrincipal: string;
@@ -296,6 +510,7 @@ interface ChatWindowProps {
 function ChatWindow({ partner, myPrincipal, onBack }: ChatWindowProps) {
   const [messageText, setMessageText] = useState("");
   const [tradeModalOpen, setTradeModalOpen] = useState(false);
+  const [payDialogAmount, setPayDialogAmount] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const partnerPrincipal = partner.principal.toString();
   const partnerName = partner.profile?.displayName || "Unknown";
@@ -306,6 +521,9 @@ function ChatWindow({ partner, myPrincipal, onBack }: ChatWindowProps) {
   const qc = useQueryClient();
 
   const partnerVerified = isVerified(partnerPrincipal);
+
+  // Load recipient's linked PhonePe UPI
+  const recipientPhonePe = loadMyPhonePeUPI(partnerPrincipal);
 
   // Mark conversation as read whenever this chat window is open
   useEffect(() => {
@@ -507,6 +725,10 @@ function ChatWindow({ partner, myPrincipal, onBack }: ChatWindowProps) {
               );
             }
 
+            // Check if message content is a payment amount
+            const payAmount = extractPaymentAmount(msg.content);
+            const showPayButton = payAmount !== null && !isMine;
+
             return (
               <div
                 key={msg.id}
@@ -519,9 +741,37 @@ function ChatWindow({ partner, myPrincipal, onBack }: ChatWindowProps) {
                       : "bg-card border border-border text-foreground rounded-bl-sm"
                   }`}
                 >
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                    {msg.content}
-                  </p>
+                  {/* Amount display */}
+                  {payAmount !== null ? (
+                    <div className="flex items-center gap-1.5">
+                      <IndianRupee
+                        className={`w-4 h-4 ${
+                          isMine
+                            ? "text-primary-foreground/80"
+                            : "text-foreground"
+                        }`}
+                      />
+                      <span className="text-base font-bold">{payAmount}</span>
+                    </div>
+                  ) : (
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                      {msg.content}
+                    </p>
+                  )}
+
+                  {/* PhonePe Pay button — shown only to the receiver when msg is a number */}
+                  {showPayButton && (
+                    <button
+                      type="button"
+                      onClick={() => setPayDialogAmount(payAmount)}
+                      className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 transition-colors text-white text-xs font-semibold shadow-sm"
+                      data-ocid="chat.phonepe_pay.inline_button"
+                    >
+                      <Phone className="w-3.5 h-3.5" />
+                      Pay ₹{payAmount} via PhonePe
+                    </button>
+                  )}
+
                   <p
                     className={`text-[10px] mt-1 ${
                       isMine
@@ -545,7 +795,7 @@ function ChatWindow({ partner, myPrincipal, onBack }: ChatWindowProps) {
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={`Message ${partnerName}...`}
+            placeholder={`Message ${partnerName}... (type a number like 99 to request payment)`}
             rows={1}
             className="bg-input border-border resize-none min-h-[40px] max-h-[120px] text-sm"
             style={{ height: "auto", overflowY: "auto" }}
@@ -561,7 +811,8 @@ function ChatWindow({ partner, myPrincipal, onBack }: ChatWindowProps) {
           </Button>
         </div>
         <p className="text-[10px] text-muted-foreground/40 mt-1.5">
-          Press Enter to send · Shift+Enter for new line
+          Press Enter to send · Shift+Enter for new line · Send a number to
+          request PhonePe payment
         </p>
       </div>
 
@@ -571,9 +822,23 @@ function ChatWindow({ partner, myPrincipal, onBack }: ChatWindowProps) {
         partnerName={partnerName}
         partnerPrincipal={partnerPrincipal}
       />
+
+      {/* PhonePe Pay Dialog */}
+      {payDialogAmount !== null && (
+        <PhonePayDialog
+          open={payDialogAmount !== null}
+          onClose={() => setPayDialogAmount(null)}
+          amountINR={payDialogAmount}
+          recipientName={partnerName}
+          recipientPhonePe={recipientPhonePe}
+          myPrincipal={myPrincipal}
+        />
+      )}
     </div>
   );
 }
+
+// ─── ChatTab (main export) ────────────────────────────────────────────────────
 
 export default function ChatTab() {
   const { identity } = useInternetIdentity();
