@@ -1,0 +1,2910 @@
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { Link, useParams } from "@tanstack/react-router";
+import {
+  AlignJustify,
+  ArrowLeft,
+  BarChart2,
+  Bot,
+  CheckCircle,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  DollarSign,
+  ExternalLink,
+  Globe,
+  Image,
+  Layout,
+  Loader2,
+  Mail,
+  MessageSquare,
+  Monitor,
+  Phone,
+  Plus,
+  Redo2,
+  Save,
+  Send,
+  Smartphone,
+  Star,
+  Tablet,
+  Trash2,
+  TrendingUp,
+  Undo2,
+  Users,
+  Wand2,
+  Zap,
+} from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import { ProtectedRoute } from "../components/ProtectedRoute";
+import {
+  useCreateSite,
+  useGetSiteById,
+  usePublishSite,
+  useUpdateSite,
+} from "../hooks/useQueries";
+
+// ============================================================
+// TYPES
+// ============================================================
+
+type HeroBlock = {
+  type: "hero";
+  heading: string;
+  subheading: string;
+  ctaText: string;
+  ctaColor: string;
+};
+type FeaturesBlock = {
+  type: "features";
+  heading: string;
+  items: { icon: string; title: string; description: string }[];
+};
+type PricingBlock = {
+  type: "pricing";
+  heading: string;
+  tiers: { name: string; price: string; features: string[] }[];
+};
+type TestimonialsBlock = {
+  type: "testimonials";
+  heading: string;
+  items: { author: string; quote: string; role: string }[];
+};
+type FooterBlock = {
+  type: "footer";
+  companyName: string;
+  links: { label: string; url: string }[];
+};
+type NavbarBlock = {
+  type: "navbar";
+  logo: string;
+  links: { label: string; url: string }[];
+};
+type GalleryBlock = {
+  type: "gallery";
+  heading: string;
+  items: { color: string; caption: string }[];
+};
+type ContactBlock = {
+  type: "contact";
+  heading: string;
+  subheading: string;
+  email: string;
+  phone: string;
+};
+type CtaBlock = {
+  type: "cta";
+  heading: string;
+  subheading: string;
+  ctaText: string;
+  ctaColor: string;
+  bgColor: string;
+};
+type FaqBlock = {
+  type: "faq";
+  heading: string;
+  items: { question: string; answer: string }[];
+};
+type TeamBlock = {
+  type: "team";
+  heading: string;
+  members: { name: string; role: string; initials: string }[];
+};
+type StatsBlock = {
+  type: "stats";
+  heading: string;
+  items: { value: string; label: string }[];
+};
+
+type Block =
+  | HeroBlock
+  | FeaturesBlock
+  | PricingBlock
+  | TestimonialsBlock
+  | FooterBlock
+  | NavbarBlock
+  | GalleryBlock
+  | ContactBlock
+  | CtaBlock
+  | FaqBlock
+  | TeamBlock
+  | StatsBlock;
+
+type ThemePreset = "dark" | "light" | "ocean" | "forest" | "sunset";
+type DeviceMode = "desktop" | "tablet" | "mobile";
+
+interface ChatMessage {
+  role: "user" | "ai";
+  content: string;
+  timestamp: number;
+}
+
+// ============================================================
+// CONSTANTS
+// ============================================================
+
+const SECTION_TYPES: {
+  type: Block["type"];
+  icon: React.ElementType;
+  label: string;
+  category: string;
+}[] = [
+  { type: "navbar", icon: AlignJustify, label: "Navbar", category: "Layout" },
+  { type: "hero", icon: Layout, label: "Hero", category: "Layout" },
+  { type: "features", icon: Star, label: "Features", category: "Content" },
+  { type: "pricing", icon: DollarSign, label: "Pricing", category: "Commerce" },
+  {
+    type: "testimonials",
+    icon: MessageSquare,
+    label: "Testimonials",
+    category: "Social",
+  },
+  { type: "gallery", icon: Image, label: "Gallery", category: "Media" },
+  { type: "contact", icon: Mail, label: "Contact", category: "Forms" },
+  { type: "cta", icon: Zap, label: "CTA Banner", category: "Marketing" },
+  { type: "faq", icon: MessageSquare, label: "FAQ", category: "Content" },
+  { type: "team", icon: Users, label: "Team", category: "Content" },
+  { type: "stats", icon: TrendingUp, label: "Stats", category: "Content" },
+  { type: "footer", icon: AlignJustify, label: "Footer", category: "Layout" },
+];
+
+const THEME_PRESETS: Record<
+  ThemePreset,
+  {
+    label: string;
+    colors: {
+      bg: string;
+      text: string;
+      accent: string;
+      border: string;
+      card: string;
+      swatch: string;
+    };
+  }
+> = {
+  dark: {
+    label: "Dark",
+    colors: {
+      bg: "#0f172a",
+      text: "#f1f5f9",
+      accent: "#6366f1",
+      border: "#1e293b",
+      card: "#1e293b",
+      swatch: "#0f172a",
+    },
+  },
+  light: {
+    label: "Light",
+    colors: {
+      bg: "#f8fafc",
+      text: "#1e293b",
+      accent: "#6366f1",
+      border: "#e2e8f0",
+      card: "#ffffff",
+      swatch: "#f8fafc",
+    },
+  },
+  ocean: {
+    label: "Ocean",
+    colors: {
+      bg: "#0c1445",
+      text: "#e0f0ff",
+      accent: "#38bdf8",
+      border: "#1e3a6e",
+      card: "#0f2060",
+      swatch: "#0c1445",
+    },
+  },
+  forest: {
+    label: "Forest",
+    colors: {
+      bg: "#0d1f1a",
+      text: "#d1fae5",
+      accent: "#34d399",
+      border: "#1a3d2f",
+      card: "#122d24",
+      swatch: "#0d1f1a",
+    },
+  },
+  sunset: {
+    label: "Sunset",
+    colors: {
+      bg: "#1a0a00",
+      text: "#fff7ed",
+      accent: "#fb923c",
+      border: "#3d1a00",
+      card: "#2d1000",
+      swatch: "#1a0a00",
+    },
+  },
+};
+
+const TEMPLATES: {
+  name: string;
+  description: string;
+  icon: React.ElementType;
+  blocks: Block["type"][];
+}[] = [
+  {
+    name: "SaaS Landing",
+    description: "Perfect for software products and startups.",
+    icon: Zap,
+    blocks: ["navbar", "hero", "features", "pricing", "testimonials", "footer"],
+  },
+  {
+    name: "Portfolio",
+    description: "Showcase your creative work and projects.",
+    icon: Image,
+    blocks: ["navbar", "hero", "gallery", "testimonials", "footer"],
+  },
+  {
+    name: "Agency",
+    description: "Full-service agency with team and contact.",
+    icon: Users,
+    blocks: [
+      "navbar",
+      "hero",
+      "stats",
+      "features",
+      "team",
+      "contact",
+      "footer",
+    ],
+  },
+];
+
+// ============================================================
+// BLOCK FACTORY
+// ============================================================
+
+function createBlock(type: Block["type"]): Block {
+  switch (type) {
+    case "hero":
+      return {
+        type: "hero",
+        heading: "Build Something Amazing",
+        subheading:
+          "Launch your idea with a beautiful, high-converting landing page in minutes.",
+        ctaText: "Get Started Free",
+        ctaColor: "#6366f1",
+      };
+    case "features":
+      return {
+        type: "features",
+        heading: "Why Choose Us",
+        items: [
+          {
+            icon: "⚡",
+            title: "Lightning Fast",
+            description: "Optimized for maximum performance.",
+          },
+          {
+            icon: "🔒",
+            title: "Secure by Default",
+            description: "Enterprise-grade security built-in.",
+          },
+          {
+            icon: "🎨",
+            title: "Beautiful Design",
+            description: "Professional UI out of the box.",
+          },
+        ],
+      };
+    case "pricing":
+      return {
+        type: "pricing",
+        heading: "Simple Pricing",
+        tiers: [
+          {
+            name: "Starter",
+            price: "$9/mo",
+            features: ["5 Projects", "Basic Analytics", "Email Support"],
+          },
+          {
+            name: "Pro",
+            price: "$29/mo",
+            features: [
+              "Unlimited Projects",
+              "Advanced Analytics",
+              "Priority Support",
+            ],
+          },
+        ],
+      };
+    case "testimonials":
+      return {
+        type: "testimonials",
+        heading: "What Our Users Say",
+        items: [
+          {
+            author: "Sarah Chen",
+            role: "Product Designer",
+            quote:
+              "This platform completely transformed how our team works together.",
+          },
+          {
+            author: "Marcus Rivera",
+            role: "CTO at TechFlow",
+            quote:
+              "The best investment we made this year. Absolutely outstanding.",
+          },
+        ],
+      };
+    case "footer":
+      return {
+        type: "footer",
+        companyName: "My Company",
+        links: [
+          { label: "Privacy Policy", url: "/privacy" },
+          { label: "Terms of Service", url: "/terms" },
+          { label: "Contact", url: "/contact" },
+        ],
+      };
+    case "navbar":
+      return {
+        type: "navbar",
+        logo: "Brand",
+        links: [
+          { label: "Home", url: "/" },
+          { label: "About", url: "/about" },
+          { label: "Services", url: "/services" },
+          { label: "Contact", url: "/contact" },
+        ],
+      };
+    case "gallery":
+      return {
+        type: "gallery",
+        heading: "Our Work",
+        items: [
+          {
+            color: "linear-gradient(135deg,#667eea,#764ba2)",
+            caption: "Branding",
+          },
+          {
+            color: "linear-gradient(135deg,#f093fb,#f5576c)",
+            caption: "Design",
+          },
+          {
+            color: "linear-gradient(135deg,#4facfe,#00f2fe)",
+            caption: "Development",
+          },
+          {
+            color: "linear-gradient(135deg,#43e97b,#38f9d7)",
+            caption: "Motion",
+          },
+          {
+            color: "linear-gradient(135deg,#fa709a,#fee140)",
+            caption: "Photography",
+          },
+          {
+            color: "linear-gradient(135deg,#a18cd1,#fbc2eb)",
+            caption: "Strategy",
+          },
+        ],
+      };
+    case "contact":
+      return {
+        type: "contact",
+        heading: "Get In Touch",
+        subheading: "Have a project in mind? We'd love to hear from you.",
+        email: "hello@company.com",
+        phone: "+1 (555) 123-4567",
+      };
+    case "cta":
+      return {
+        type: "cta",
+        heading: "Ready to Get Started?",
+        subheading: "Join thousands of teams already using our platform.",
+        ctaText: "Start Your Free Trial",
+        ctaColor: "#6366f1",
+        bgColor: "#1e1b4b",
+      };
+    case "faq":
+      return {
+        type: "faq",
+        heading: "Frequently Asked Questions",
+        items: [
+          {
+            question: "How do I get started?",
+            answer:
+              "Sign up for a free account and follow our quick-start guide to launch your first project in minutes.",
+          },
+          {
+            question: "Is there a free trial?",
+            answer:
+              "Yes! Our 14-day free trial includes full access to all Pro features with no credit card required.",
+          },
+          {
+            question: "Can I cancel anytime?",
+            answer:
+              "Absolutely. You can cancel your subscription at any time with no cancellation fees or hidden charges.",
+          },
+        ],
+      };
+    case "team":
+      return {
+        type: "team",
+        heading: "Meet the Team",
+        members: [
+          { name: "Alex Johnson", role: "CEO & Co-founder", initials: "AJ" },
+          { name: "Maria García", role: "Head of Design", initials: "MG" },
+          { name: "Kai Tanaka", role: "Lead Engineer", initials: "KT" },
+          { name: "Priya Patel", role: "Growth Lead", initials: "PP" },
+        ],
+      };
+    case "stats":
+      return {
+        type: "stats",
+        heading: "By the Numbers",
+        items: [
+          { value: "10K+", label: "Happy Customers" },
+          { value: "99.9%", label: "Uptime" },
+          { value: "50+", label: "Countries" },
+          { value: "$2M+", label: "Revenue Generated" },
+        ],
+      };
+  }
+}
+
+// ============================================================
+// CANVAS BLOCK PREVIEWS
+// ============================================================
+
+function BlockPreview({
+  block,
+  selected,
+  onClick,
+  theme,
+}: {
+  block: Block;
+  selected: boolean;
+  onClick: () => void;
+  theme: ThemePreset;
+}) {
+  const t = THEME_PRESETS[theme].colors;
+  const base = `cursor-pointer border-2 transition-all rounded-lg ${selected ? "border-indigo-500" : "border-transparent hover:border-indigo-400/40"}`;
+
+  if (block.type === "navbar") {
+    return (
+      <div
+        className={base}
+        onClick={onClick}
+        style={{
+          background: t.card,
+          border: `2px solid ${selected ? "#6366f1" : "transparent"}`,
+          padding: "12px 20px",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <span style={{ color: t.accent, fontWeight: 700, fontSize: 16 }}>
+            {block.logo}
+          </span>
+          <div style={{ display: "flex", gap: 16 }}>
+            {block.links.map((link, i) => (
+              <span
+                key={i}
+                style={{ color: t.text, fontSize: 13, opacity: 0.8 }}
+              >
+                {link.label}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "hero") {
+    return (
+      <div
+        className={base}
+        onClick={onClick}
+        style={{
+          background: `linear-gradient(135deg, ${t.bg} 0%, ${t.card} 100%)`,
+          padding: "40px 24px",
+          textAlign: "center",
+          border: selected ? "2px solid #6366f1" : "2px solid transparent",
+        }}
+      >
+        <h2
+          style={{
+            fontSize: 22,
+            fontWeight: 800,
+            color: t.text,
+            marginBottom: 8,
+          }}
+        >
+          {block.heading}
+        </h2>
+        <p
+          style={{
+            color: t.text,
+            opacity: 0.7,
+            marginBottom: 20,
+            fontSize: 14,
+          }}
+        >
+          {block.subheading}
+        </p>
+        <button
+          type="button"
+          style={{
+            background: block.ctaColor,
+            color: "#fff",
+            border: "none",
+            borderRadius: 8,
+            padding: "10px 24px",
+            fontWeight: 600,
+            fontSize: 14,
+            cursor: "pointer",
+          }}
+        >
+          {block.ctaText}
+        </button>
+      </div>
+    );
+  }
+
+  if (block.type === "features") {
+    return (
+      <div
+        className={base}
+        onClick={onClick}
+        style={{
+          background: t.card,
+          padding: "24px",
+          border: selected ? "2px solid #6366f1" : "2px solid transparent",
+        }}
+      >
+        <h3
+          style={{
+            textAlign: "center",
+            fontWeight: 700,
+            color: t.text,
+            marginBottom: 20,
+          }}
+        >
+          {block.heading}
+        </h3>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${block.items.length}, 1fr)`,
+            gap: 16,
+          }}
+        >
+          {block.items.map((item, i) => (
+            <div
+              key={i}
+              style={{
+                textAlign: "center",
+                padding: "12px",
+                borderRadius: 8,
+                background: t.bg,
+              }}
+            >
+              <div style={{ fontSize: 24, marginBottom: 6 }}>{item.icon}</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: t.text }}>
+                {item.title}
+              </div>
+              <div
+                style={{
+                  fontSize: 11,
+                  color: t.text,
+                  opacity: 0.6,
+                  marginTop: 4,
+                }}
+              >
+                {item.description}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "pricing") {
+    return (
+      <div
+        className={base}
+        onClick={onClick}
+        style={{
+          background: t.card,
+          padding: "24px",
+          border: selected ? "2px solid #6366f1" : "2px solid transparent",
+        }}
+      >
+        <h3
+          style={{
+            textAlign: "center",
+            fontWeight: 700,
+            color: t.text,
+            marginBottom: 16,
+          }}
+        >
+          {block.heading}
+        </h3>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${block.tiers.length}, 1fr)`,
+            gap: 12,
+          }}
+        >
+          {block.tiers.map((tier, i) => (
+            <div
+              key={i}
+              style={{
+                border: `1px solid ${t.border}`,
+                borderRadius: 8,
+                padding: 16,
+              }}
+            >
+              <div style={{ fontWeight: 700, color: t.text }}>{tier.name}</div>
+              <div style={{ color: t.accent, fontWeight: 600, marginTop: 4 }}>
+                {tier.price}
+              </div>
+              <ul style={{ marginTop: 8, listStyle: "none", padding: 0 }}>
+                {tier.features.map((f, fi) => (
+                  <li
+                    key={fi}
+                    style={{
+                      fontSize: 11,
+                      color: t.text,
+                      opacity: 0.7,
+                      marginBottom: 2,
+                    }}
+                  >
+                    ✓ {f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "testimonials") {
+    return (
+      <div
+        className={base}
+        onClick={onClick}
+        style={{
+          background: t.card,
+          padding: "24px",
+          border: selected ? "2px solid #6366f1" : "2px solid transparent",
+        }}
+      >
+        <h3
+          style={{
+            textAlign: "center",
+            fontWeight: 700,
+            color: t.text,
+            marginBottom: 16,
+          }}
+        >
+          {block.heading}
+        </h3>
+        <div
+          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
+        >
+          {block.items.map((item, i) => (
+            <div
+              key={i}
+              style={{
+                border: `1px solid ${t.border}`,
+                borderRadius: 8,
+                padding: 14,
+              }}
+            >
+              <p
+                style={{
+                  color: t.text,
+                  fontSize: 12,
+                  fontStyle: "italic",
+                  opacity: 0.85,
+                  marginBottom: 8,
+                }}
+              >
+                &ldquo;{item.quote}&rdquo;
+              </p>
+              <div style={{ fontWeight: 600, color: t.text, fontSize: 12 }}>
+                {item.author}
+              </div>
+              <div style={{ color: t.text, fontSize: 11, opacity: 0.6 }}>
+                {item.role}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "footer") {
+    return (
+      <div
+        className={base}
+        onClick={onClick}
+        style={{
+          background: t.bg,
+          padding: "16px 24px",
+          border: selected ? "2px solid #6366f1" : "2px solid transparent",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <span style={{ fontWeight: 700, color: t.text, fontSize: 14 }}>
+            {block.companyName}
+          </span>
+          <div style={{ display: "flex", gap: 16 }}>
+            {block.links.map((link, i) => (
+              <span
+                key={i}
+                style={{ color: t.text, fontSize: 11, opacity: 0.6 }}
+              >
+                {link.label}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "gallery") {
+    return (
+      <div
+        className={base}
+        onClick={onClick}
+        style={{
+          background: t.card,
+          padding: "24px",
+          border: selected ? "2px solid #6366f1" : "2px solid transparent",
+        }}
+      >
+        <h3
+          style={{
+            textAlign: "center",
+            fontWeight: 700,
+            color: t.text,
+            marginBottom: 16,
+          }}
+        >
+          {block.heading}
+        </h3>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: 8,
+          }}
+        >
+          {block.items.map((item, i) => (
+            <div
+              key={i}
+              style={{
+                borderRadius: 8,
+                height: 64,
+                background: item.color,
+                display: "flex",
+                alignItems: "flex-end",
+                padding: "6px 8px",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 10,
+                  color: "rgba(255,255,255,0.85)",
+                  fontWeight: 500,
+                }}
+              >
+                {item.caption}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "contact") {
+    return (
+      <div
+        className={base}
+        onClick={onClick}
+        style={{
+          background: t.card,
+          padding: "24px",
+          border: selected ? "2px solid #6366f1" : "2px solid transparent",
+        }}
+      >
+        <h3
+          style={{
+            textAlign: "center",
+            fontWeight: 700,
+            color: t.text,
+            marginBottom: 4,
+          }}
+        >
+          {block.heading}
+        </h3>
+        <p
+          style={{
+            textAlign: "center",
+            fontSize: 13,
+            color: t.text,
+            opacity: 0.65,
+            marginBottom: 16,
+          }}
+        >
+          {block.subheading}
+        </p>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 10,
+            maxWidth: 400,
+            margin: "0 auto",
+          }}
+        >
+          <div
+            style={{
+              border: `1px solid ${t.border}`,
+              borderRadius: 6,
+              padding: "8px 12px",
+              fontSize: 12,
+              color: t.text,
+              opacity: 0.7,
+            }}
+          >
+            Name
+          </div>
+          <div
+            style={{
+              border: `1px solid ${t.border}`,
+              borderRadius: 6,
+              padding: "8px 12px",
+              fontSize: 12,
+              color: t.text,
+              opacity: 0.7,
+            }}
+          >
+            Email
+          </div>
+          <div
+            style={{
+              border: `1px solid ${t.border}`,
+              borderRadius: 6,
+              padding: "8px 12px",
+              fontSize: 12,
+              color: t.text,
+              opacity: 0.7,
+              gridColumn: "span 2",
+              height: 48,
+            }}
+          >
+            Message
+          </div>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: 16,
+            marginTop: 12,
+          }}
+        >
+          <span
+            style={{
+              fontSize: 12,
+              color: t.accent,
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+            }}
+          >
+            ✉ {block.email}
+          </span>
+          <span
+            style={{
+              fontSize: 12,
+              color: t.accent,
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+            }}
+          >
+            📞 {block.phone}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "cta") {
+    return (
+      <div
+        className={base}
+        onClick={onClick}
+        style={{
+          background: block.bgColor,
+          padding: "40px 24px",
+          textAlign: "center",
+          border: selected ? "2px solid #6366f1" : "2px solid transparent",
+        }}
+      >
+        <h2
+          style={{
+            fontSize: 22,
+            fontWeight: 800,
+            color: "#ffffff",
+            marginBottom: 8,
+          }}
+        >
+          {block.heading}
+        </h2>
+        <p
+          style={{
+            color: "rgba(255,255,255,0.7)",
+            marginBottom: 20,
+            fontSize: 14,
+          }}
+        >
+          {block.subheading}
+        </p>
+        <button
+          type="button"
+          style={{
+            background: block.ctaColor,
+            color: "#fff",
+            border: "none",
+            borderRadius: 8,
+            padding: "12px 28px",
+            fontWeight: 700,
+            fontSize: 14,
+            cursor: "pointer",
+          }}
+        >
+          {block.ctaText}
+        </button>
+      </div>
+    );
+  }
+
+  if (block.type === "faq") {
+    return (
+      <div
+        className={base}
+        onClick={onClick}
+        style={{
+          background: t.card,
+          padding: "24px",
+          border: selected ? "2px solid #6366f1" : "2px solid transparent",
+        }}
+      >
+        <h3
+          style={{
+            textAlign: "center",
+            fontWeight: 700,
+            color: t.text,
+            marginBottom: 16,
+          }}
+        >
+          {block.heading}
+        </h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {block.items.map((item, i) => (
+            <div
+              key={i}
+              style={{
+                border: `1px solid ${t.border}`,
+                borderRadius: 8,
+                padding: "12px 16px",
+              }}
+            >
+              <div
+                style={{
+                  fontWeight: 600,
+                  color: t.text,
+                  fontSize: 13,
+                  marginBottom: 4,
+                }}
+              >
+                Q: {item.question}
+              </div>
+              <div style={{ fontSize: 12, color: t.text, opacity: 0.65 }}>
+                {item.answer}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "team") {
+    return (
+      <div
+        className={base}
+        onClick={onClick}
+        style={{
+          background: t.card,
+          padding: "24px",
+          border: selected ? "2px solid #6366f1" : "2px solid transparent",
+        }}
+      >
+        <h3
+          style={{
+            textAlign: "center",
+            fontWeight: 700,
+            color: t.text,
+            marginBottom: 20,
+          }}
+        >
+          {block.heading}
+        </h3>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${Math.min(block.members.length, 4)}, 1fr)`,
+            gap: 12,
+          }}
+        >
+          {block.members.map((member, i) => (
+            <div key={i} style={{ textAlign: "center", padding: 12 }}>
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: "50%",
+                  background: `linear-gradient(135deg, ${t.accent}, ${t.accent}88)`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  margin: "0 auto 8px",
+                  fontWeight: 700,
+                  color: "#fff",
+                  fontSize: 14,
+                }}
+              >
+                {member.initials}
+              </div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: t.text }}>
+                {member.name}
+              </div>
+              <div style={{ fontSize: 11, color: t.text, opacity: 0.6 }}>
+                {member.role}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "stats") {
+    return (
+      <div
+        className={base}
+        onClick={onClick}
+        style={{
+          background: t.card,
+          padding: "32px 24px",
+          border: selected ? "2px solid #6366f1" : "2px solid transparent",
+        }}
+      >
+        <h3
+          style={{
+            textAlign: "center",
+            fontWeight: 700,
+            color: t.text,
+            marginBottom: 24,
+          }}
+        >
+          {block.heading}
+        </h3>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${block.items.length}, 1fr)`,
+            gap: 16,
+          }}
+        >
+          {block.items.map((item, i) => (
+            <div key={i} style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 28, fontWeight: 800, color: t.accent }}>
+                {item.value}
+              </div>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: t.text,
+                  opacity: 0.7,
+                  marginTop: 4,
+                }}
+              >
+                {item.label}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+// ============================================================
+// PROPERTIES PANEL
+// ============================================================
+
+function PropertiesPanel({
+  block,
+  onChange,
+}: {
+  block: Block | null;
+  onChange: (updated: Block) => void;
+}) {
+  if (!block) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center p-6">
+        <Layout className="w-10 h-10 text-muted-foreground mb-3" />
+        <p className="text-muted-foreground text-sm">
+          Click a section on the canvas to edit its properties
+        </p>
+      </div>
+    );
+  }
+
+  if (block.type === "navbar") {
+    return (
+      <div className="p-4 space-y-4">
+        <h3 className="font-semibold text-foreground text-sm">Navbar</h3>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">
+            Logo / Brand Name
+          </Label>
+          <Input
+            value={block.logo}
+            onChange={(e) => onChange({ ...block, logo: e.target.value })}
+            className="bg-input border-border text-sm h-8"
+            data-ocid="builder.navbar_logo.input"
+          />
+        </div>
+        {block.links.map((link, i) => (
+          <div key={i} className="flex gap-2">
+            <Input
+              value={link.label}
+              onChange={(e) => {
+                const links = [...block.links];
+                links[i] = { ...links[i], label: e.target.value };
+                onChange({ ...block, links });
+              }}
+              placeholder="Label"
+              className="bg-input border-border text-sm h-7"
+            />
+            <Input
+              value={link.url}
+              onChange={(e) => {
+                const links = [...block.links];
+                links[i] = { ...links[i], url: e.target.value };
+                onChange({ ...block, links });
+              }}
+              placeholder="URL"
+              className="bg-input border-border text-sm h-7"
+            />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (block.type === "hero") {
+    return (
+      <div className="p-4 space-y-4">
+        <h3 className="font-semibold text-foreground text-sm">Hero Section</h3>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Heading</Label>
+          <Input
+            value={block.heading}
+            onChange={(e) => onChange({ ...block, heading: e.target.value })}
+            className="bg-input border-border text-sm h-8"
+            data-ocid="builder.heading.input"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Subheading</Label>
+          <Textarea
+            value={block.subheading}
+            onChange={(e) => onChange({ ...block, subheading: e.target.value })}
+            className="bg-input border-border text-sm resize-none"
+            rows={2}
+            data-ocid="builder.subheading.textarea"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">CTA Text</Label>
+          <Input
+            value={block.ctaText}
+            onChange={(e) => onChange({ ...block, ctaText: e.target.value })}
+            className="bg-input border-border text-sm h-8"
+            data-ocid="builder.cta.input"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">CTA Color</Label>
+          <div className="flex gap-2 items-center">
+            <input
+              type="color"
+              value={block.ctaColor}
+              onChange={(e) => onChange({ ...block, ctaColor: e.target.value })}
+              className="w-8 h-8 rounded cursor-pointer border border-border bg-transparent"
+            />
+            <span className="text-muted-foreground text-sm font-mono">
+              {block.ctaColor}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "features") {
+    return (
+      <div className="p-4 space-y-4">
+        <h3 className="font-semibold text-foreground text-sm">
+          Features Section
+        </h3>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">
+            Section Heading
+          </Label>
+          <Input
+            value={block.heading}
+            onChange={(e) => onChange({ ...block, heading: e.target.value })}
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        {block.items.map((item, i) => (
+          <div
+            key={i}
+            className="border border-border rounded-lg p-3 space-y-2"
+          >
+            <p className="text-xs font-medium text-muted-foreground">
+              Feature {i + 1}
+            </p>
+            <Input
+              value={item.icon}
+              onChange={(e) => {
+                const items = [...block.items];
+                items[i] = { ...items[i], icon: e.target.value };
+                onChange({ ...block, items });
+              }}
+              placeholder="Emoji"
+              className="bg-input border-border text-sm h-7 w-16"
+            />
+            <Input
+              value={item.title}
+              onChange={(e) => {
+                const items = [...block.items];
+                items[i] = { ...items[i], title: e.target.value };
+                onChange({ ...block, items });
+              }}
+              placeholder="Title"
+              className="bg-input border-border text-sm h-7"
+            />
+            <Input
+              value={item.description}
+              onChange={(e) => {
+                const items = [...block.items];
+                items[i] = { ...items[i], description: e.target.value };
+                onChange({ ...block, items });
+              }}
+              placeholder="Description"
+              className="bg-input border-border text-sm h-7"
+            />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (block.type === "pricing") {
+    return (
+      <div className="p-4 space-y-4">
+        <h3 className="font-semibold text-foreground text-sm">Pricing</h3>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">
+            Section Heading
+          </Label>
+          <Input
+            value={block.heading}
+            onChange={(e) => onChange({ ...block, heading: e.target.value })}
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        {block.tiers.map((tier, i) => (
+          <div
+            key={i}
+            className="border border-border rounded-lg p-3 space-y-2"
+          >
+            <p className="text-xs font-medium text-muted-foreground">
+              Tier {i + 1}
+            </p>
+            <Input
+              value={tier.name}
+              onChange={(e) => {
+                const tiers = [...block.tiers];
+                tiers[i] = { ...tiers[i], name: e.target.value };
+                onChange({ ...block, tiers });
+              }}
+              placeholder="Name"
+              className="bg-input border-border text-sm h-7"
+            />
+            <Input
+              value={tier.price}
+              onChange={(e) => {
+                const tiers = [...block.tiers];
+                tiers[i] = { ...tiers[i], price: e.target.value };
+                onChange({ ...block, tiers });
+              }}
+              placeholder="Price"
+              className="bg-input border-border text-sm h-7"
+            />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (block.type === "testimonials") {
+    return (
+      <div className="p-4 space-y-4">
+        <h3 className="font-semibold text-foreground text-sm">Testimonials</h3>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">
+            Section Heading
+          </Label>
+          <Input
+            value={block.heading}
+            onChange={(e) => onChange({ ...block, heading: e.target.value })}
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        {block.items.map((item, i) => (
+          <div
+            key={i}
+            className="border border-border rounded-lg p-3 space-y-2"
+          >
+            <p className="text-xs font-medium text-muted-foreground">
+              Testimonial {i + 1}
+            </p>
+            <Input
+              value={item.author}
+              onChange={(e) => {
+                const items = [...block.items];
+                items[i] = { ...items[i], author: e.target.value };
+                onChange({ ...block, items });
+              }}
+              placeholder="Author"
+              className="bg-input border-border text-sm h-7"
+            />
+            <Input
+              value={item.role}
+              onChange={(e) => {
+                const items = [...block.items];
+                items[i] = { ...items[i], role: e.target.value };
+                onChange({ ...block, items });
+              }}
+              placeholder="Role"
+              className="bg-input border-border text-sm h-7"
+            />
+            <Textarea
+              value={item.quote}
+              onChange={(e) => {
+                const items = [...block.items];
+                items[i] = { ...items[i], quote: e.target.value };
+                onChange({ ...block, items });
+              }}
+              placeholder="Quote"
+              rows={2}
+              className="bg-input border-border text-sm resize-none"
+            />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (block.type === "footer") {
+    return (
+      <div className="p-4 space-y-4">
+        <h3 className="font-semibold text-foreground text-sm">Footer</h3>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Company Name</Label>
+          <Input
+            value={block.companyName}
+            onChange={(e) =>
+              onChange({ ...block, companyName: e.target.value })
+            }
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        {block.links.map((link, i) => (
+          <div key={i} className="flex gap-2">
+            <Input
+              value={link.label}
+              onChange={(e) => {
+                const links = [...block.links];
+                links[i] = { ...links[i], label: e.target.value };
+                onChange({ ...block, links });
+              }}
+              placeholder="Label"
+              className="bg-input border-border text-sm h-7"
+            />
+            <Input
+              value={link.url}
+              onChange={(e) => {
+                const links = [...block.links];
+                links[i] = { ...links[i], url: e.target.value };
+                onChange({ ...block, links });
+              }}
+              placeholder="URL"
+              className="bg-input border-border text-sm h-7"
+            />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (block.type === "gallery") {
+    return (
+      <div className="p-4 space-y-4">
+        <h3 className="font-semibold text-foreground text-sm">Gallery</h3>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">
+            Section Heading
+          </Label>
+          <Input
+            value={block.heading}
+            onChange={(e) => onChange({ ...block, heading: e.target.value })}
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        {block.items.map((item, i) => (
+          <div key={i} className="flex gap-2 items-center">
+            <span className="text-xs text-muted-foreground w-6">{i + 1}.</span>
+            <Input
+              value={item.caption}
+              onChange={(e) => {
+                const items = [...block.items];
+                items[i] = { ...items[i], caption: e.target.value };
+                onChange({ ...block, items });
+              }}
+              placeholder="Caption"
+              className="bg-input border-border text-sm h-7"
+            />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (block.type === "contact") {
+    return (
+      <div className="p-4 space-y-4">
+        <h3 className="font-semibold text-foreground text-sm">Contact</h3>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Heading</Label>
+          <Input
+            value={block.heading}
+            onChange={(e) => onChange({ ...block, heading: e.target.value })}
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Subheading</Label>
+          <Textarea
+            value={block.subheading}
+            onChange={(e) => onChange({ ...block, subheading: e.target.value })}
+            className="bg-input border-border text-sm resize-none"
+            rows={2}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Email</Label>
+          <Input
+            value={block.email}
+            onChange={(e) => onChange({ ...block, email: e.target.value })}
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Phone</Label>
+          <Input
+            value={block.phone}
+            onChange={(e) => onChange({ ...block, phone: e.target.value })}
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "cta") {
+    return (
+      <div className="p-4 space-y-4">
+        <h3 className="font-semibold text-foreground text-sm">CTA Banner</h3>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Heading</Label>
+          <Input
+            value={block.heading}
+            onChange={(e) => onChange({ ...block, heading: e.target.value })}
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Subheading</Label>
+          <Textarea
+            value={block.subheading}
+            onChange={(e) => onChange({ ...block, subheading: e.target.value })}
+            className="bg-input border-border text-sm resize-none"
+            rows={2}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">CTA Text</Label>
+          <Input
+            value={block.ctaText}
+            onChange={(e) => onChange({ ...block, ctaText: e.target.value })}
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Button Color</Label>
+          <div className="flex gap-2 items-center">
+            <input
+              type="color"
+              value={block.ctaColor}
+              onChange={(e) => onChange({ ...block, ctaColor: e.target.value })}
+              className="w-8 h-8 rounded cursor-pointer border border-border bg-transparent"
+            />
+            <span className="text-muted-foreground text-xs font-mono">
+              {block.ctaColor}
+            </span>
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">
+            Background Color
+          </Label>
+          <div className="flex gap-2 items-center">
+            <input
+              type="color"
+              value={block.bgColor}
+              onChange={(e) => onChange({ ...block, bgColor: e.target.value })}
+              className="w-8 h-8 rounded cursor-pointer border border-border bg-transparent"
+            />
+            <span className="text-muted-foreground text-xs font-mono">
+              {block.bgColor}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "faq") {
+    return (
+      <div className="p-4 space-y-4">
+        <h3 className="font-semibold text-foreground text-sm">FAQ</h3>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">
+            Section Heading
+          </Label>
+          <Input
+            value={block.heading}
+            onChange={(e) => onChange({ ...block, heading: e.target.value })}
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        {block.items.map((item, i) => (
+          <div
+            key={i}
+            className="border border-border rounded-lg p-3 space-y-2"
+          >
+            <p className="text-xs font-medium text-muted-foreground">
+              Item {i + 1}
+            </p>
+            <Input
+              value={item.question}
+              onChange={(e) => {
+                const items = [...block.items];
+                items[i] = { ...items[i], question: e.target.value };
+                onChange({ ...block, items });
+              }}
+              placeholder="Question"
+              className="bg-input border-border text-sm h-7"
+            />
+            <Textarea
+              value={item.answer}
+              onChange={(e) => {
+                const items = [...block.items];
+                items[i] = { ...items[i], answer: e.target.value };
+                onChange({ ...block, items });
+              }}
+              placeholder="Answer"
+              rows={2}
+              className="bg-input border-border text-sm resize-none"
+            />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (block.type === "team") {
+    return (
+      <div className="p-4 space-y-4">
+        <h3 className="font-semibold text-foreground text-sm">Team</h3>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">
+            Section Heading
+          </Label>
+          <Input
+            value={block.heading}
+            onChange={(e) => onChange({ ...block, heading: e.target.value })}
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        {block.members.map((member, i) => (
+          <div
+            key={i}
+            className="border border-border rounded-lg p-3 space-y-2"
+          >
+            <p className="text-xs font-medium text-muted-foreground">
+              Member {i + 1}
+            </p>
+            <Input
+              value={member.name}
+              onChange={(e) => {
+                const members = [...block.members];
+                members[i] = { ...members[i], name: e.target.value };
+                onChange({ ...block, members });
+              }}
+              placeholder="Name"
+              className="bg-input border-border text-sm h-7"
+            />
+            <Input
+              value={member.role}
+              onChange={(e) => {
+                const members = [...block.members];
+                members[i] = { ...members[i], role: e.target.value };
+                onChange({ ...block, members });
+              }}
+              placeholder="Role"
+              className="bg-input border-border text-sm h-7"
+            />
+            <Input
+              value={member.initials}
+              onChange={(e) => {
+                const members = [...block.members];
+                members[i] = { ...members[i], initials: e.target.value };
+                onChange({ ...block, members });
+              }}
+              placeholder="Initials (e.g. AJ)"
+              className="bg-input border-border text-sm h-7"
+            />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (block.type === "stats") {
+    return (
+      <div className="p-4 space-y-4">
+        <h3 className="font-semibold text-foreground text-sm">Stats</h3>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">
+            Section Heading
+          </Label>
+          <Input
+            value={block.heading}
+            onChange={(e) => onChange({ ...block, heading: e.target.value })}
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        {block.items.map((item, i) => (
+          <div key={i} className="flex gap-2 items-center">
+            <Input
+              value={item.value}
+              onChange={(e) => {
+                const items = [...block.items];
+                items[i] = { ...items[i], value: e.target.value };
+                onChange({ ...block, items });
+              }}
+              placeholder="Value"
+              className="bg-input border-border text-sm h-7 w-20"
+            />
+            <Input
+              value={item.label}
+              onChange={(e) => {
+                const items = [...block.items];
+                items[i] = { ...items[i], label: e.target.value };
+                onChange({ ...block, items });
+              }}
+              placeholder="Label"
+              className="bg-input border-border text-sm h-7"
+            />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return null;
+}
+
+// ============================================================
+// AI ASSISTANT ENGINE
+// ============================================================
+
+function getAiResponse(
+  prompt: string,
+  currentBlocks: Block[],
+  onSetBlocks: (blocks: Block[]) => void,
+  selectedBlock: Block | null,
+  onUpdateBlock: (b: Block) => void,
+): string {
+  const p = prompt.toLowerCase();
+
+  // Template suggestions
+  if (
+    p.includes("portfolio") ||
+    p.includes("designer") ||
+    p.includes("artist") ||
+    p.includes("photography")
+  ) {
+    const template = TEMPLATES.find((t) => t.name === "Portfolio");
+    if (template) {
+      onSetBlocks(template.blocks.map(createBlock));
+      return "I've set up a Portfolio site for you — perfect for showcasing your creative work! Customize each section in the Properties panel on the right. ✨";
+    }
+  }
+
+  if (
+    p.includes("saas") ||
+    p.includes("startup") ||
+    p.includes("software") ||
+    p.includes("app") ||
+    p.includes("product")
+  ) {
+    const template = TEMPLATES.find((t) => t.name === "SaaS Landing");
+    if (template) {
+      onSetBlocks(template.blocks.map(createBlock));
+      return "Done! I've built a SaaS Landing page structure for you — navbar, hero, features, pricing, testimonials, and footer. Start customizing in the Properties panel! 🚀";
+    }
+  }
+
+  if (
+    p.includes("agency") ||
+    p.includes("company") ||
+    p.includes("business") ||
+    p.includes("team")
+  ) {
+    const template = TEMPLATES.find((t) => t.name === "Agency");
+    if (template) {
+      onSetBlocks(template.blocks.map(createBlock));
+      return "Great choice! I've created an Agency site with stats, team showcase, and contact section. Your business site is ready to customize. 💼";
+    }
+  }
+
+  // Add specific blocks
+  if (
+    p.includes("add hero") ||
+    (p.includes("hero") && !currentBlocks.some((b) => b.type === "hero"))
+  ) {
+    onSetBlocks([createBlock("hero"), ...currentBlocks]);
+    return "Added a Hero section at the top! Click it to customize the heading, subheading, and CTA button. 🎯";
+  }
+
+  if (
+    p.includes("add contact") ||
+    (p.includes("contact") && !currentBlocks.some((b) => b.type === "contact"))
+  ) {
+    onSetBlocks([...currentBlocks, createBlock("contact")]);
+    return "Added a Contact form section at the bottom of your page. Update your email and phone details in the Properties panel. 📬";
+  }
+
+  if (
+    p.includes("add pricing") ||
+    (p.includes("pricing") && !currentBlocks.some((b) => b.type === "pricing"))
+  ) {
+    onSetBlocks([...currentBlocks, createBlock("pricing")]);
+    return "Pricing section added! Head to Properties to update your tiers and pricing details. 💰";
+  }
+
+  if (
+    p.includes("add gallery") ||
+    (p.includes("gallery") && !currentBlocks.some((b) => b.type === "gallery"))
+  ) {
+    onSetBlocks([...currentBlocks, createBlock("gallery")]);
+    return "Gallery section added with 6 colorful placeholder cards. Update the captions in Properties. 🖼️";
+  }
+
+  if (
+    p.includes("add faq") ||
+    (p.includes("faq") && !currentBlocks.some((b) => b.type === "faq"))
+  ) {
+    onSetBlocks([...currentBlocks, createBlock("faq")]);
+    return "FAQ section added with 3 starter questions. Edit them in the Properties panel to match your product. ❓";
+  }
+
+  if (
+    p.includes("add stats") ||
+    (p.includes("stats") && !currentBlocks.some((b) => b.type === "stats"))
+  ) {
+    onSetBlocks([...currentBlocks, createBlock("stats")]);
+    return "Stats section added! Update the numbers to reflect your real metrics and milestones. 📊";
+  }
+
+  if (
+    p.includes("add team") ||
+    (p.includes("team") && !currentBlocks.some((b) => b.type === "team"))
+  ) {
+    onSetBlocks([...currentBlocks, createBlock("team")]);
+    return "Team section added with placeholder members. Add your real team in the Properties panel. 👥";
+  }
+
+  if (
+    p.includes("add navbar") ||
+    p.includes("add nav") ||
+    p.includes("navigation")
+  ) {
+    if (!currentBlocks.some((b) => b.type === "navbar")) {
+      onSetBlocks([createBlock("navbar"), ...currentBlocks]);
+      return "Navbar added to the top of your page! Customize the logo and nav links in Properties. 🧭";
+    }
+    return "You already have a navbar! Click it on the canvas to edit the links.";
+  }
+
+  if (p.includes("add footer") || p.includes("footer")) {
+    if (!currentBlocks.some((b) => b.type === "footer")) {
+      onSetBlocks([...currentBlocks, createBlock("footer")]);
+      return "Footer added at the bottom. Update your company name and links in Properties. 📄";
+    }
+    return "You already have a footer! Click it on the canvas to edit.";
+  }
+
+  // Remove blocks
+  const removeMatch = p.match(
+    /remove (hero|features|pricing|testimonials|footer|navbar|gallery|contact|cta|faq|team|stats)/,
+  );
+  if (removeMatch) {
+    const typeToRemove = removeMatch[1] as Block["type"];
+    const updated = currentBlocks.filter((b) => b.type !== typeToRemove);
+    if (updated.length !== currentBlocks.length) {
+      onSetBlocks(updated);
+      return `Removed the ${typeToRemove} section from your page.`;
+    }
+    return `I couldn't find a ${typeToRemove} section to remove.`;
+  }
+
+  // Change heading/title
+  const headingMatch = p.match(
+    /(?:change heading|update title|set title|set heading)\s+to\s+(.+)/i,
+  );
+  if (headingMatch && selectedBlock && "heading" in selectedBlock) {
+    const newHeading = headingMatch[1].trim();
+    onUpdateBlock({ ...selectedBlock, heading: newHeading } as Block);
+    return `Updated the heading to "${newHeading}"! 📝`;
+  }
+
+  // Full site generation shortcut
+  if (
+    p.includes("generate") ||
+    p.includes("create full site") ||
+    p.includes("build site") ||
+    p.includes("full site")
+  ) {
+    onSetBlocks(TEMPLATES[0].blocks.map(createBlock));
+    return "Generated a complete SaaS landing page for you! It includes a navbar, hero, features, pricing, testimonials, and footer. Customize each section in the Properties panel. 🎉";
+  }
+
+  // Clear canvas
+  if (p.includes("clear") || p.includes("start over") || p.includes("empty")) {
+    onSetBlocks([]);
+    return "Canvas cleared! Start fresh by adding sections from the Blocks tab, or ask me to generate a site for you. 🧹";
+  }
+
+  // Fallback help
+  return `I can help you build your site! Here are some things you can ask me:
+
+• "Make me a portfolio site"
+• "Generate a SaaS landing page"
+• "Add a pricing section"
+• "Add a contact form"
+• "Remove the footer"
+• "Change heading to Your New Title"
+
+What would you like to build? 🤖`;
+}
+
+// ============================================================
+// AI CHAT PANEL
+// ============================================================
+
+function AiChatPanel({
+  blocks,
+  onSetBlocks,
+  selectedBlock,
+  onUpdateBlock,
+}: {
+  blocks: Block[];
+  onSetBlocks: (blocks: Block[]) => void;
+  selectedBlock: Block | null;
+  onUpdateBlock: (b: Block) => void;
+}) {
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      role: "ai",
+      content:
+        'Hi! I\'m your AI site builder assistant. Tell me what kind of site you want to create, or ask me to add specific sections. Try: "Make me a SaaS landing page" 🚀',
+      timestamp: Date.now(),
+    },
+  ]);
+  const [input, setInput] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const scrollToBottom = useCallback(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, []);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: scroll when messages or typing state changes
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isTyping, scrollToBottom]);
+
+  const sendMessage = useCallback(
+    (text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed || isTyping) return;
+
+      setMessages((prev) => [
+        ...prev,
+        { role: "user", content: trimmed, timestamp: Date.now() },
+      ]);
+      setInput("");
+      setIsTyping(true);
+
+      setTimeout(() => {
+        const response = getAiResponse(
+          trimmed,
+          blocks,
+          onSetBlocks,
+          selectedBlock,
+          onUpdateBlock,
+        );
+        setMessages((prev) => [
+          ...prev,
+          { role: "ai", content: response, timestamp: Date.now() },
+        ]);
+        setIsTyping(false);
+      }, 600);
+    },
+    [blocks, onSetBlocks, selectedBlock, onUpdateBlock, isTyping],
+  );
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage(input);
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="px-3 py-2.5 border-b border-border/60 flex items-center gap-2">
+        <div
+          className="w-7 h-7 rounded-full flex items-center justify-center"
+          style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)" }}
+        >
+          <Bot className="w-4 h-4 text-white" />
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-foreground">AI Assistant</p>
+          <p className="text-[10px] text-muted-foreground">
+            Powered by SiteForge AI
+          </p>
+        </div>
+        <div className="ml-auto flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-[10px] text-emerald-400">Online</span>
+        </div>
+      </div>
+
+      {/* Quick actions */}
+      <div className="px-3 py-2 flex gap-1.5 flex-wrap border-b border-border/40">
+        {["SaaS site", "Portfolio", "Agency site"].map((q) => (
+          <button
+            key={q}
+            type="button"
+            onClick={() => sendMessage(`Generate a ${q}`)}
+            className="text-[10px] px-2 py-1 rounded-full border border-indigo-500/40 text-indigo-400 hover:bg-indigo-500/10 transition-colors"
+          >
+            {q}
+          </button>
+        ))}
+      </div>
+
+      {/* Chat history */}
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0"
+      >
+        {messages.map((msg, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+            className={`flex gap-2 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}
+          >
+            {msg.role === "ai" && (
+              <div
+                className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5"
+                style={{
+                  background: "linear-gradient(135deg, #6366f1, #a855f7)",
+                }}
+              >
+                <Bot className="w-3.5 h-3.5 text-white" />
+              </div>
+            )}
+            <div
+              className={`max-w-[85%] rounded-lg px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap ${
+                msg.role === "user"
+                  ? "bg-indigo-600 text-white rounded-tr-none"
+                  : "bg-muted text-foreground rounded-tl-none"
+              }`}
+            >
+              {msg.content}
+            </div>
+          </motion.div>
+        ))}
+
+        {isTyping && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex gap-2 items-center"
+          >
+            <div
+              className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center"
+              style={{
+                background: "linear-gradient(135deg, #6366f1, #a855f7)",
+              }}
+            >
+              <Bot className="w-3.5 h-3.5 text-white" />
+            </div>
+            <div className="bg-muted rounded-lg rounded-tl-none px-3 py-2.5 flex gap-1">
+              {[0, 1, 2].map((dot) => (
+                <motion.span
+                  key={dot}
+                  className="w-1.5 h-1.5 rounded-full bg-muted-foreground"
+                  animate={{ y: [0, -4, 0] }}
+                  transition={{
+                    duration: 0.6,
+                    repeat: Number.POSITIVE_INFINITY,
+                    delay: dot * 0.15,
+                  }}
+                />
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </div>
+
+      {/* Input area */}
+      <div className="border-t border-border/60 p-3 space-y-2">
+        <button
+          type="button"
+          onClick={() => sendMessage("Generate a full SaaS landing site")}
+          className="w-full flex items-center justify-center gap-2 py-1.5 rounded-lg border border-indigo-500/30 text-indigo-400 text-xs hover:bg-indigo-500/10 transition-colors"
+          data-ocid="builder.ai.generate_site_button"
+        >
+          <Wand2 className="w-3.5 h-3.5" />
+          Generate Full Site
+        </button>
+        <div className="flex gap-2">
+          <input
+            ref={inputRef}
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask AI anything..."
+            className="flex-1 bg-input border border-border rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-indigo-500 transition-colors"
+            data-ocid="builder.ai.input"
+          />
+          <button
+            type="button"
+            onClick={() => sendMessage(input)}
+            disabled={!input.trim() || isTyping}
+            className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white hover:bg-indigo-500 disabled:opacity-40 transition-colors shrink-0"
+            data-ocid="builder.ai.send.button"
+          >
+            <Send className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// MAIN BUILDER EXPORT
+// ============================================================
+
+export default function BuilderPage() {
+  return (
+    <ProtectedRoute>
+      <BuilderContent />
+    </ProtectedRoute>
+  );
+}
+
+function BuilderContent() {
+  const params = useParams({ strict: false }) as { siteId?: string };
+  const siteId = params.siteId;
+  const isNew = !siteId || siteId === "new";
+
+  const { data: existingSite, isLoading: siteLoading } = useGetSiteById(
+    isNew ? undefined : siteId,
+  );
+  const createSite = useCreateSite();
+  const updateSite = useUpdateSite();
+  const publishSite = usePublishSite();
+
+  const [siteTitle, setSiteTitle] = useState("Untitled Site");
+  const [siteDescription, setSiteDescription] = useState("");
+  const [blocks, setBlocks] = useState<Block[]>([createBlock("hero")]);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(0);
+  const [savedSiteId, setSavedSiteId] = useState<string | null>(null);
+  const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
+  const [initialized, setInitialized] = useState(false);
+  const [theme, setTheme] = useState<ThemePreset>("dark");
+  const [device, setDevice] = useState<DeviceMode>("desktop");
+  const [history, setHistory] = useState<Block[][]>([[createBlock("hero")]]);
+  const [historyIndex, setHistoryIndex] = useState(0);
+
+  // Load existing site
+  if (existingSite && !initialized) {
+    setSiteTitle(existingSite.title);
+    setSiteDescription(existingSite.description);
+    try {
+      const parsed = JSON.parse(existingSite.content);
+      if (Array.isArray(parsed)) {
+        setBlocks(parsed);
+        setHistory([parsed]);
+        setHistoryIndex(0);
+      }
+    } catch {}
+    if (existingSite.status.__kind__ === "published") {
+      setPublishedUrl(existingSite.status.published);
+    }
+    setInitialized(true);
+  }
+
+  const activeSiteId = savedSiteId || (!isNew ? siteId : null);
+
+  // Push to history whenever blocks change
+  const pushHistory = useCallback(
+    (newBlocks: Block[]) => {
+      setHistory((prev) => {
+        const sliced = prev.slice(0, historyIndex + 1);
+        return [...sliced, newBlocks];
+      });
+      setHistoryIndex((prev) => prev + 1);
+      setBlocks(newBlocks);
+    },
+    [historyIndex],
+  );
+
+  const undo = useCallback(() => {
+    if (historyIndex <= 0) return;
+    const newIndex = historyIndex - 1;
+    setHistoryIndex(newIndex);
+    setBlocks(history[newIndex]);
+    setSelectedIndex(null);
+  }, [historyIndex, history]);
+
+  const redo = useCallback(() => {
+    if (historyIndex >= history.length - 1) return;
+    const newIndex = historyIndex + 1;
+    setHistoryIndex(newIndex);
+    setBlocks(history[newIndex]);
+    setSelectedIndex(null);
+  }, [historyIndex, history]);
+
+  // Keyboard shortcuts
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      } else if (
+        (e.ctrlKey || e.metaKey) &&
+        (e.key === "y" || (e.key === "z" && e.shiftKey))
+      ) {
+        e.preventDefault();
+        redo();
+      }
+    },
+    [undo, redo],
+  );
+
+  const addBlock = useCallback(
+    (type: Block["type"]) => {
+      setBlocks((prev) => {
+        const updated = [...prev, createBlock(type)];
+        setSelectedIndex(updated.length - 1);
+        setHistory((h) => {
+          const sliced = h.slice(0, historyIndex + 1);
+          return [...sliced, updated];
+        });
+        setHistoryIndex((i) => i + 1);
+        return updated;
+      });
+    },
+    [historyIndex],
+  );
+
+  const removeBlock = useCallback(
+    (index: number) => {
+      setBlocks((prev) => {
+        const updated = prev.filter((_, i) => i !== index);
+        setSelectedIndex(null);
+        setHistory((h) => {
+          const sliced = h.slice(0, historyIndex + 1);
+          return [...sliced, updated];
+        });
+        setHistoryIndex((i) => i + 1);
+        return updated;
+      });
+    },
+    [historyIndex],
+  );
+
+  const duplicateBlock = useCallback(
+    (index: number) => {
+      setBlocks((prev) => {
+        const clone = JSON.parse(JSON.stringify(prev[index])) as Block;
+        const updated = [
+          ...prev.slice(0, index + 1),
+          clone,
+          ...prev.slice(index + 1),
+        ];
+        setSelectedIndex(index + 1);
+        setHistory((h) => {
+          const sliced = h.slice(0, historyIndex + 1);
+          return [...sliced, updated];
+        });
+        setHistoryIndex((i) => i + 1);
+        return updated;
+      });
+    },
+    [historyIndex],
+  );
+
+  const moveBlock = useCallback(
+    (index: number, dir: -1 | 1) => {
+      setBlocks((prev) => {
+        const updated = [...prev];
+        const target = index + dir;
+        if (target < 0 || target >= updated.length) return prev;
+        [updated[index], updated[target]] = [updated[target], updated[index]];
+        setSelectedIndex(target);
+        setHistory((h) => {
+          const sliced = h.slice(0, historyIndex + 1);
+          return [...sliced, updated];
+        });
+        setHistoryIndex((i) => i + 1);
+        return updated;
+      });
+    },
+    [historyIndex],
+  );
+
+  const updateBlock = useCallback(
+    (updated: Block) => {
+      setBlocks((prev) =>
+        prev.map((b, i) => (i === selectedIndex ? updated : b)),
+      );
+    },
+    [selectedIndex],
+  );
+
+  const handleSave = async () => {
+    const content = JSON.stringify(blocks);
+    try {
+      if (activeSiteId) {
+        await updateSite.mutateAsync({
+          id: activeSiteId,
+          title: siteTitle,
+          description: siteDescription,
+          content,
+        });
+        toast.success("Site saved!");
+      } else {
+        const newId = await createSite.mutateAsync({
+          title: siteTitle,
+          description: siteDescription,
+          content,
+        });
+        setSavedSiteId(newId);
+        toast.success("Site created!");
+      }
+    } catch {
+      toast.error("Failed to save site.");
+    }
+  };
+
+  const handlePublish = async () => {
+    if (!activeSiteId) {
+      toast.error("Please save your site first.");
+      return;
+    }
+    try {
+      const url = await publishSite.mutateAsync(activeSiteId);
+      setPublishedUrl(url);
+      toast.success("Site published!", { description: url });
+    } catch {
+      toast.error("Failed to publish site.");
+    }
+  };
+
+  const applyTemplate = (template: (typeof TEMPLATES)[0]) => {
+    if (blocks.length > 0) {
+      if (
+        !window.confirm(
+          `Replace current canvas with "${template.name}" template?`,
+        )
+      )
+        return;
+    }
+    pushHistory(template.blocks.map(createBlock));
+    setSelectedIndex(0);
+    toast.success(`Template "${template.name}" applied!`);
+  };
+
+  const canvasMaxWidth =
+    device === "desktop" ? "none" : device === "tablet" ? "768px" : "390px";
+
+  const isSaving = createSite.isPending || updateSite.isPending;
+  const isPublishing = publishSite.isPending;
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < history.length - 1;
+
+  if (!isNew && siteLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const selectedBlock = selectedIndex !== null ? blocks[selectedIndex] : null;
+
+  return (
+    <div
+      className="flex flex-col h-screen bg-background overflow-hidden"
+      onKeyDown={handleKeyDown}
+    >
+      {/* ── Toolbar ── */}
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-card/80 backdrop-blur-sm shrink-0">
+        <Button
+          variant="ghost"
+          size="sm"
+          asChild
+          className="text-muted-foreground h-8 px-2"
+        >
+          <Link to="/dashboard">
+            <ArrowLeft className="w-4 h-4 mr-1" /> Back
+          </Link>
+        </Button>
+
+        <div className="h-5 w-px bg-border" />
+
+        <Input
+          value={siteTitle}
+          onChange={(e) => setSiteTitle(e.target.value)}
+          className="max-w-44 h-8 bg-input border-border text-sm font-semibold"
+          placeholder="Site title"
+          data-ocid="builder.title.input"
+        />
+
+        <div className="h-5 w-px bg-border" />
+
+        {/* Undo / Redo */}
+        <div className="flex gap-1">
+          <button
+            type="button"
+            onClick={undo}
+            disabled={!canUndo}
+            title="Undo (Ctrl+Z)"
+            className="w-7 h-7 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent disabled:opacity-30 transition-colors"
+            data-ocid="builder.undo.button"
+          >
+            <Undo2 className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={redo}
+            disabled={!canRedo}
+            title="Redo (Ctrl+Shift+Z)"
+            className="w-7 h-7 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent disabled:opacity-30 transition-colors"
+            data-ocid="builder.redo.button"
+          >
+            <Redo2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <div className="h-5 w-px bg-border" />
+
+        {/* Device toggle */}
+        <div className="flex gap-0.5 bg-muted rounded-lg p-0.5">
+          {[
+            { mode: "desktop" as DeviceMode, Icon: Monitor, title: "Desktop" },
+            { mode: "tablet" as DeviceMode, Icon: Tablet, title: "Tablet" },
+            { mode: "mobile" as DeviceMode, Icon: Smartphone, title: "Mobile" },
+          ].map(({ mode, Icon, title }) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setDevice(mode)}
+              title={title}
+              className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
+                device === mode
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              data-ocid={`builder.device_${mode}.button`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+            </button>
+          ))}
+        </div>
+
+        <div className="flex-1" />
+
+        {/* Block count badge */}
+        <Badge
+          variant="outline"
+          className="text-xs text-muted-foreground border-border"
+        >
+          {blocks.length} {blocks.length === 1 ? "section" : "sections"}
+        </Badge>
+
+        {publishedUrl && (
+          <a
+            href={publishedUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary text-xs flex items-center gap-1 hover:underline"
+          >
+            <ExternalLink className="w-3 h-3" /> View Live
+          </a>
+        )}
+
+        <Button
+          size="sm"
+          variant="outline"
+          className="border-border h-8 text-xs"
+          onClick={handleSave}
+          disabled={isSaving}
+          data-ocid="builder.save.button"
+        >
+          {isSaving ? (
+            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+          ) : (
+            <Save className="w-3.5 h-3.5 mr-1.5" />
+          )}
+          Save Draft
+        </Button>
+
+        <Button
+          size="sm"
+          className="bg-indigo-600 hover:bg-indigo-500 h-8 text-xs font-semibold"
+          onClick={handlePublish}
+          disabled={isPublishing}
+          data-ocid="builder.publish.button"
+        >
+          {isPublishing ? (
+            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+          ) : (
+            <Globe className="w-3.5 h-3.5 mr-1.5" />
+          )}
+          Publish
+        </Button>
+      </div>
+
+      {/* ── 3-column layout ── */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* ── Left Panel ── */}
+        <div className="w-56 shrink-0 border-r border-border bg-card/50 flex flex-col overflow-hidden">
+          <Tabs defaultValue="blocks" className="flex flex-col h-full">
+            <TabsList className="w-full rounded-none border-b border-border bg-card/80 shrink-0 h-9 p-0.5 gap-0.5">
+              <TabsTrigger
+                value="blocks"
+                className="flex-1 text-xs h-7 rounded-sm"
+                data-ocid="builder.blocks.tab"
+              >
+                Blocks
+              </TabsTrigger>
+              <TabsTrigger
+                value="templates"
+                className="flex-1 text-xs h-7 rounded-sm"
+                data-ocid="builder.templates.tab"
+              >
+                Templates
+              </TabsTrigger>
+              <TabsTrigger
+                value="ai"
+                className="flex-1 text-xs h-7 rounded-sm"
+                data-ocid="builder.ai.tab"
+              >
+                <Bot className="w-3 h-3 mr-1" />
+                AI
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Blocks Tab */}
+            <TabsContent
+              value="blocks"
+              className="flex-1 overflow-y-auto m-0 data-[state=inactive]:hidden"
+            >
+              {/* Theme picker */}
+              <div className="p-3 border-b border-border/60">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                  Theme
+                </p>
+                <div className="flex gap-2 flex-wrap">
+                  {(Object.keys(THEME_PRESETS) as ThemePreset[]).map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      title={THEME_PRESETS[t].label}
+                      onClick={() => setTheme(t)}
+                      className="relative w-6 h-6 rounded-full border-2 transition-all"
+                      style={{
+                        background: THEME_PRESETS[t].colors.swatch,
+                        borderColor:
+                          theme === t
+                            ? THEME_PRESETS[t].colors.accent
+                            : "transparent",
+                        boxShadow:
+                          theme === t
+                            ? `0 0 0 2px ${THEME_PRESETS[t].colors.accent}44`
+                            : undefined,
+                      }}
+                      data-ocid={`builder.theme_${t}.button`}
+                    >
+                      {theme === t && (
+                        <CheckCircle
+                          className="w-3 h-3 absolute inset-0 m-auto"
+                          style={{ color: THEME_PRESETS[t].colors.accent }}
+                        />
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  {THEME_PRESETS[theme].label} theme
+                </p>
+              </div>
+
+              {/* Block list by category */}
+              <div className="p-3">
+                {[
+                  "Layout",
+                  "Content",
+                  "Commerce",
+                  "Marketing",
+                  "Social",
+                  "Media",
+                  "Forms",
+                ].map((cat) => {
+                  const catBlocks = SECTION_TYPES.filter(
+                    (s) => s.category === cat,
+                  );
+                  if (!catBlocks.length) return null;
+                  return (
+                    <div key={cat} className="mb-3">
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
+                        {cat}
+                      </p>
+                      <div className="space-y-1">
+                        {catBlocks.map(({ type, icon: Icon, label }) => (
+                          <button
+                            key={type}
+                            type="button"
+                            onClick={() => addBlock(type)}
+                            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors text-xs text-left group"
+                            data-ocid={`builder.add_${type}.button`}
+                          >
+                            <Icon className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                            {label}
+                            <Plus className="w-3 h-3 ml-auto opacity-0 group-hover:opacity-100" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Site info */}
+              <div className="border-t border-border/60 p-3">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                  Site Info
+                </p>
+                <Textarea
+                  value={siteDescription}
+                  onChange={(e) => setSiteDescription(e.target.value)}
+                  placeholder="Site description..."
+                  rows={3}
+                  className="bg-input border-border text-xs resize-none"
+                  data-ocid="builder.description.textarea"
+                />
+              </div>
+            </TabsContent>
+
+            {/* Templates Tab */}
+            <TabsContent
+              value="templates"
+              className="flex-1 overflow-y-auto m-0 data-[state=inactive]:hidden"
+            >
+              <div className="p-3 space-y-3">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Starter Templates
+                </p>
+                {TEMPLATES.map((tpl) => (
+                  <motion.div
+                    key={tpl.name}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="border border-border rounded-lg p-3 hover:border-indigo-500/40 transition-colors"
+                  >
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div className="w-7 h-7 rounded-md bg-indigo-500/20 flex items-center justify-center">
+                        <tpl.icon className="w-4 h-4 text-indigo-400" />
+                      </div>
+                      <span className="text-sm font-semibold text-foreground">
+                        {tpl.name}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mb-2.5">
+                      {tpl.description}
+                    </p>
+                    <div className="flex flex-wrap gap-1 mb-2.5">
+                      {tpl.blocks.map((bt) => (
+                        <span
+                          key={bt}
+                          className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground"
+                        >
+                          {bt}
+                        </span>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => applyTemplate(tpl)}
+                      className="w-full py-1.5 text-xs rounded-md bg-indigo-600/90 text-white hover:bg-indigo-500 transition-colors font-medium"
+                      data-ocid={`builder.template_${tpl.name.toLowerCase().replace(/ /g, "_")}.button`}
+                    >
+                      Use Template
+                    </button>
+                  </motion.div>
+                ))}
+              </div>
+            </TabsContent>
+
+            {/* AI Tab */}
+            <TabsContent
+              value="ai"
+              className="flex-1 overflow-hidden m-0 data-[state=inactive]:hidden"
+            >
+              <AiChatPanel
+                blocks={blocks}
+                onSetBlocks={(newBlocks) => {
+                  pushHistory(newBlocks);
+                  setSelectedIndex(0);
+                }}
+                selectedBlock={selectedBlock}
+                onUpdateBlock={updateBlock}
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* ── Center Canvas ── */}
+        <div
+          className="flex-1 overflow-y-auto bg-slate-950"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedIndex(null);
+          }}
+        >
+          <div
+            className="p-6 mx-auto"
+            style={{
+              maxWidth: canvasMaxWidth,
+              transition: "max-width 0.3s ease",
+            }}
+          >
+            {blocks.length === 0 ? (
+              <div className="flex flex-col items-center justify-center min-h-80 text-center rounded-xl border-2 border-dashed border-slate-700">
+                <div className="w-14 h-14 rounded-2xl bg-slate-800 flex items-center justify-center mb-4">
+                  <Layout className="w-7 h-7 text-slate-500" />
+                </div>
+                <p className="text-slate-300 font-semibold mb-1">
+                  Your canvas is empty
+                </p>
+                <p className="text-slate-500 text-sm mb-4">
+                  Add sections from the left panel or ask the AI to generate a
+                  site
+                </p>
+                <button
+                  type="button"
+                  onClick={() => addBlock("hero")}
+                  className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition-colors"
+                  data-ocid="builder.empty_state.button"
+                >
+                  Add Hero Section
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <AnimatePresence>
+                  {blocks.map((block, index) => (
+                    <motion.div
+                      key={`${block.type}-${index}`}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, height: 0, overflow: "hidden" }}
+                      transition={{ duration: 0.2 }}
+                      className="relative group"
+                      data-ocid={`builder.block.${index + 1}`}
+                    >
+                      <BlockPreview
+                        block={block}
+                        selected={selectedIndex === index}
+                        onClick={() => setSelectedIndex(index)}
+                        theme={theme}
+                      />
+
+                      {/* Block controls */}
+                      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                        <button
+                          type="button"
+                          className="w-6 h-6 bg-card/95 rounded flex items-center justify-center text-muted-foreground hover:text-foreground border border-border"
+                          onClick={() => moveBlock(index, -1)}
+                          disabled={index === 0}
+                          title="Move up"
+                        >
+                          <ChevronUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          className="w-6 h-6 bg-card/95 rounded flex items-center justify-center text-muted-foreground hover:text-foreground border border-border"
+                          onClick={() => moveBlock(index, 1)}
+                          disabled={index === blocks.length - 1}
+                          title="Move down"
+                        >
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          className="w-6 h-6 bg-card/95 rounded flex items-center justify-center text-muted-foreground hover:text-indigo-400 border border-border"
+                          onClick={() => duplicateBlock(index)}
+                          title="Duplicate"
+                          data-ocid={`builder.block.${index + 1}.duplicate`}
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          className="w-6 h-6 bg-destructive/80 rounded flex items-center justify-center text-white hover:bg-destructive border border-destructive/30"
+                          onClick={() => removeBlock(index)}
+                          title="Remove section"
+                          data-ocid={`builder.block.${index + 1}.delete_button`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {selectedIndex === index && (
+                        <Badge className="absolute top-2 left-2 bg-indigo-600/90 text-[10px] z-10">
+                          {block.type}
+                        </Badge>
+                      )}
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Right Panel: Properties ── */}
+        <div className="w-64 shrink-0 border-l border-border bg-card/50 flex flex-col overflow-hidden">
+          <div className="border-b border-border px-4 py-2.5 flex items-center gap-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex-1">
+              Properties
+            </p>
+            {selectedBlock && (
+              <Badge
+                variant="outline"
+                className="text-[10px] border-indigo-500/40 text-indigo-400"
+              >
+                {selectedBlock.type}
+              </Badge>
+            )}
+          </div>
+          <ScrollArea className="flex-1">
+            <PropertiesPanel block={selectedBlock} onChange={updateBlock} />
+          </ScrollArea>
+        </div>
+      </div>
+    </div>
+  );
+}
