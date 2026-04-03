@@ -458,7 +458,7 @@ export function useGetMessages(partnerPrincipal: string | null) {
       return actor.getMessages(Principal.fromText(partnerPrincipal));
     },
     enabled: !!actor && !isFetching && !!partnerPrincipal,
-    refetchInterval: 5_000,
+    refetchInterval: 2_000,
   });
 }
 
@@ -541,7 +541,7 @@ export function useUnreadMessageCount(myPrincipal: string) {
       return total;
     },
     enabled: !!actor && !isFetching && !!myPrincipal,
-    refetchInterval: 10_000,
+    refetchInterval: 3_000,
   });
 }
 

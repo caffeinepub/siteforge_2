@@ -21,6 +21,7 @@ import {
   Edit,
   ExternalLink,
   Globe,
+  IndianRupee,
   KeyRound,
   Layers,
   LayoutDashboard,
@@ -31,6 +32,7 @@ import {
   Settings,
   Shield,
   ShoppingBag,
+  Smartphone,
   Tag,
   Trash2,
   XCircle,
@@ -56,7 +58,12 @@ import {
   useUpdateUsername,
 } from "../hooks/useQueries";
 import AdminPanelInline from "./AdminPanelInline";
-import ChatTab from "./ChatTab";
+import ChatTab, {
+  PinBoxes,
+  hasPhonePePIN,
+  loadPhonePePIN,
+  savePhonePePIN,
+} from "./ChatTab";
 
 function getSiteStatusBadge(site: Site) {
   switch (site.status.__kind__) {
@@ -142,6 +149,17 @@ function DashboardContent() {
   });
   const [settingsLoaded, setSettingsLoaded] = useState(false);
 
+  // PhonePe UPI stored in localStorage keyed by principal
+  const getPhonePeKey = (p: string) => `siteforge:phonepe_upi:${p}`;
+  const [phonePeUPI, setPhonePeUPI] = useState<string>("");
+  const [phonePeInput, setPhonePeInput] = useState<string>("");
+  const [phonePeSaved, setPhonePeSaved] = useState(false);
+  // PhonePe PIN state
+  const [pinNew, setPinNew] = useState("");
+  const [pinConfirm, setPinConfirm] = useState("");
+  const [pinSaved, setPinSaved] = useState(false);
+  const [showChangePIN, setShowChangePIN] = useState(false);
+
   const isAuthenticated = !!identity;
   const autoCreateAttempted = useRef(false);
   const showProfileSetup =
@@ -169,6 +187,16 @@ function DashboardContent() {
         });
     }
   }, [isFetched, userProfile, identity, createProfile]);
+
+  // Load PhonePe UPI from localStorage when principal is available
+  useEffect(() => {
+    if (myPrincipal) {
+      const stored =
+        localStorage.getItem(`siteforge:phonepe_upi:${myPrincipal}`) ?? "";
+      setPhonePeUPI(stored);
+      setPhonePeInput(stored);
+    }
+  }, [myPrincipal]);
 
   // Populate settings form from profile
   if (userProfile && !settingsLoaded) {
@@ -688,6 +716,173 @@ function DashboardContent() {
                   >
                     <Copy className="w-4 h-4" />
                   </Button>
+                </div>
+              </div>
+
+              {/* PhonePe UPI Section */}
+              <div className="card-glow bg-card rounded-xl border border-border p-6 mt-4">
+                <h2 className="font-display font-bold text-xl text-foreground mb-1 flex items-center gap-2">
+                  <Smartphone className="w-5 h-5 text-purple-500" />
+                  PhonePe UPI
+                </h2>
+                <p className="text-muted-foreground text-sm mb-4">
+                  Link your PhonePe UPI ID or mobile number to send and receive
+                  payments directly in chat.
+                </p>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="phonePeUPI" className="text-foreground">
+                      UPI ID or Mobile Number
+                    </Label>
+                    <Input
+                      id="phonePeUPI"
+                      value={phonePeInput}
+                      onChange={(e) => {
+                        setPhonePeInput(e.target.value);
+                        setPhonePeSaved(false);
+                      }}
+                      placeholder="yourname@upi or 9999999999"
+                      className="bg-input border-border"
+                      data-ocid="settings.phonepe.input"
+                    />
+                  </div>
+                  {phonePeUPI && (
+                    <div className="flex items-center gap-2 text-sm text-green-500">
+                      <CheckCircle className="w-4 h-4" />
+                      Linked: {phonePeUPI}
+                    </div>
+                  )}
+                  <Button
+                    type="button"
+                    className="bg-purple-600 hover:bg-purple-700 text-white font-semibold"
+                    onClick={() => {
+                      if (!phonePeInput.trim()) {
+                        toast.error(
+                          "Enter your UPI ID or mobile number first.",
+                        );
+                        return;
+                      }
+                      localStorage.setItem(
+                        getPhonePeKey(myPrincipal),
+                        phonePeInput.trim(),
+                      );
+                      setPhonePeUPI(phonePeInput.trim());
+                      setPhonePeSaved(true);
+                      toast.success("PhonePe UPI linked successfully!");
+                    }}
+                    data-ocid="settings.phonepe.save_button"
+                  >
+                    <IndianRupee className="w-4 h-4 mr-2" />
+                    {phonePeSaved ? "Saved!" : "Save UPI"}
+                  </Button>
+
+                  {/* PhonePe PIN Section */}
+                  <div className="border-t border-border pt-3 mt-1">
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">
+                          PhonePe Payment PIN
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Required to authorize payments from chat and
+                          marketplace
+                        </p>
+                      </div>
+                      {hasPhonePePIN(myPrincipal) && !showChangePIN && (
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 text-sm text-green-500">
+                            <CheckCircle className="w-4 h-4" />
+                            <span>PIN set</span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="text-xs border-purple-500/30 text-purple-400 hover:bg-purple-500/10"
+                            onClick={() => {
+                              setShowChangePIN(true);
+                              setPinNew("");
+                              setPinConfirm("");
+                              setPinSaved(false);
+                            }}
+                            data-ocid="settings.phonepe.change_pin_button"
+                          >
+                            Change PIN
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    {(!hasPhonePePIN(myPrincipal) || showChangePIN) && (
+                      <div className="space-y-3 p-4 rounded-xl bg-gradient-to-br from-purple-500/5 to-purple-500/10 border border-purple-500/20">
+                        <p className="text-xs text-center text-muted-foreground">
+                          {showChangePIN
+                            ? "Set a new 4-digit PIN"
+                            : "Create a 4-digit PIN to secure payments"}
+                        </p>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium text-foreground">
+                            New PIN
+                          </Label>
+                          <PinBoxes value={pinNew} onChange={setPinNew} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium text-foreground">
+                            Confirm PIN
+                          </Label>
+                          <PinBoxes
+                            value={pinConfirm}
+                            onChange={setPinConfirm}
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          {showChangePIN && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="flex-1 border-border"
+                              onClick={() => {
+                                setShowChangePIN(false);
+                                setPinNew("");
+                                setPinConfirm("");
+                              }}
+                              data-ocid="settings.phonepe.cancel_pin_button"
+                            >
+                              Cancel
+                            </Button>
+                          )}
+                          <Button
+                            type="button"
+                            className="flex-1 bg-gradient-to-r from-[#5f259f] to-[#8b44d4] hover:opacity-90 text-white font-semibold"
+                            disabled={
+                              pinNew.length < 4 ||
+                              pinConfirm.length < 4 ||
+                              pinSaved
+                            }
+                            onClick={() => {
+                              if (pinNew !== pinConfirm) {
+                                toast.error(
+                                  "PINs do not match. Please try again.",
+                                );
+                                return;
+                              }
+                              savePhonePePIN(myPrincipal, pinNew);
+                              setPinSaved(true);
+                              setShowChangePIN(false);
+                              toast.success("PhonePe PIN saved successfully!");
+                            }}
+                            data-ocid="settings.phonepe.save_pin_button"
+                          >
+                            {pinSaved
+                              ? "PIN Saved ✓"
+                              : showChangePIN
+                                ? "Update PIN"
+                                : "Save PIN"}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

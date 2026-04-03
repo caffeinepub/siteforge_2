@@ -28,6 +28,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { UserDirectoryEntry } from "../backend";
@@ -43,7 +44,14 @@ import {
   useProposeTradeMessage,
   useRespondToTradeProposal,
   useSendMessage,
+  useUnreadMessageCount,
 } from "../hooks/useQueries";
+import {
+  isSoundEnabled,
+  playMessageSound,
+  playPaymentSound,
+  setSoundEnabled,
+} from "../lib/notificationSounds";
 import {
   followUser,
   isFollowing,
@@ -66,6 +74,16 @@ function loadMyPhonePeUPI(principal: string): string {
 function saveMyPhonePeUPI(principal: string, upi: string) {
   localStorage.setItem(getPhonePeStorageKey(principal), upi);
 }
+
+// PIN helpers
+const PHONEPE_PIN_KEY = (principal: string) =>
+  `siteforge:phonepe_pin:${principal}`;
+export const loadPhonePePIN = (principal: string) =>
+  localStorage.getItem(PHONEPE_PIN_KEY(principal)) ?? "";
+export const savePhonePePIN = (principal: string, pin: string) =>
+  localStorage.setItem(PHONEPE_PIN_KEY(principal), pin);
+export const hasPhonePePIN = (principal: string) =>
+  !!localStorage.getItem(PHONEPE_PIN_KEY(principal));
 
 /** Returns the number if the message text is purely a number (integer or decimal), else null */
 function extractPaymentAmount(text: string): number | null {
@@ -101,6 +119,112 @@ function formatTimestamp(ts: bigint) {
   return date.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
+// ─── PinBoxes ─────────────────────────────────────────────────────────────────
+
+interface PinBoxesProps {
+  value: string;
+  onChange: (v: string) => void;
+  autoFocus?: boolean;
+  hasError?: boolean;
+}
+
+export function PinBoxes({
+  value,
+  onChange,
+  autoFocus,
+  hasError,
+}: PinBoxesProps) {
+  const refs = [
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+  ];
+
+  // Focus first box on mount if autoFocus
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refs are stable, intentional on-mount only
+  useEffect(() => {
+    if (autoFocus) {
+      refs[0]?.current?.focus();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoFocus]);
+
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    idx: number,
+  ) => {
+    if (e.key === "Backspace") {
+      e.preventDefault();
+      if (value.length > 0) {
+        const newVal = value.slice(0, -1);
+        onChange(newVal);
+        const focusIdx = Math.max(
+          0,
+          newVal.length === 0
+            ? 0
+            : newVal.length - 1 < idx
+              ? newVal.length
+              : idx - 1,
+        );
+        setTimeout(
+          () => refs[Math.max(0, idx > 0 ? idx - 1 : 0)]?.current?.focus(),
+          0,
+        );
+        void focusIdx;
+      }
+    }
+  };
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    idx: number,
+  ) => {
+    const digit = e.target.value.replace(/\D/g, "").slice(-1);
+    if (!digit) return;
+    let newVal = value;
+    if (idx < value.length) {
+      // Replace digit at position
+      newVal = value.slice(0, idx) + digit + value.slice(idx + 1);
+    } else if (value.length === idx) {
+      newVal = value + digit;
+    }
+    if (newVal.length > 4) return;
+    onChange(newVal);
+    if (idx < 3) {
+      setTimeout(() => refs[idx + 1]?.current?.focus(), 0);
+    }
+  };
+
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.select();
+  };
+
+  return (
+    <div className="flex gap-3 justify-center">
+      {[0, 1, 2, 3].map((idx) => (
+        <input
+          key={idx}
+          ref={refs[idx]}
+          type="password"
+          inputMode="numeric"
+          maxLength={1}
+          value={value[idx] ? "●" : ""}
+          onChange={(e) => handleChange(e, idx)}
+          onKeyDown={(e) => handleKeyDown(e, idx)}
+          onFocus={handleFocus}
+          className={`w-12 h-14 border-2 rounded-xl text-center text-2xl font-bold bg-white transition-all outline-none
+            ${hasError ? "border-red-400 ring-2 ring-red-200" : value[idx] ? "border-purple-500 ring-2 ring-purple-200" : "border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200"}
+          `}
+          placeholder=""
+          aria-label={`PIN digit ${idx + 1}`}
+          data-ocid={`phonepe.pin.input.${idx + 1}` as any}
+        />
+      ))}
+    </div>
+  );
+}
+
 // ─── PhonePe Pay Dialog ───────────────────────────────────────────────────────
 
 interface PhonePayDialogProps {
@@ -108,7 +232,7 @@ interface PhonePayDialogProps {
   onClose: () => void;
   amountINR: number;
   recipientName: string;
-  recipientPhonePe: string; // receiver's UPI (from their stored data)
+  recipientPhonePe: string;
   myPrincipal: string;
 }
 
@@ -121,16 +245,34 @@ function PhonePayDialog({
   myPrincipal,
 }: PhonePayDialogProps) {
   const [myUPI, setMyUPI] = useState(() => loadMyPhonePeUPI(myPrincipal));
-  const [step, setStep] = useState<"link" | "confirm" | "done">("link");
+  type Step = "link" | "set_pin" | "confirm" | "done";
+  const [step, setStep] = useState<Step>("link");
+  const [newPIN, setNewPIN] = useState("");
+  const [confirmPIN, setConfirmPIN] = useState("");
+  const [enteredPIN, setEnteredPIN] = useState("");
+  const [pinError, setPinError] = useState(false);
+  const [shake, setShake] = useState(false);
 
   const commission = amountINR * COMMISSION_RATE;
   const recipientReceives = amountINR - commission;
 
-  // Reset step when dialog opens
+  // Reset state when dialog opens
   useEffect(() => {
     if (open) {
-      setMyUPI(loadMyPhonePeUPI(myPrincipal));
-      setStep(loadMyPhonePeUPI(myPrincipal) ? "confirm" : "link");
+      const upi = loadMyPhonePeUPI(myPrincipal);
+      setMyUPI(upi);
+      setNewPIN("");
+      setConfirmPIN("");
+      setEnteredPIN("");
+      setPinError(false);
+      setShake(false);
+      if (!upi) {
+        setStep("link");
+      } else if (!hasPhonePePIN(myPrincipal)) {
+        setStep("set_pin");
+      } else {
+        setStep("confirm");
+      }
     }
   }, [open, myPrincipal]);
 
@@ -139,142 +281,276 @@ function PhonePayDialog({
       toast.error("Enter your PhonePe UPI ID or mobile number first.");
       return;
     }
+    if (newPIN.length !== 4) {
+      toast.error("Please enter a 4-digit PIN.");
+      return;
+    }
+    if (newPIN !== confirmPIN) {
+      toast.error("PINs do not match. Please try again.");
+      return;
+    }
     saveMyPhonePeUPI(myPrincipal, myUPI.trim());
+    savePhonePePIN(myPrincipal, newPIN);
+    toast.success("PhonePe linked and PIN set!");
+    setStep("confirm");
+  };
+
+  const handleSetPin = () => {
+    if (newPIN.length !== 4) {
+      toast.error("Please enter a 4-digit PIN.");
+      return;
+    }
+    if (newPIN !== confirmPIN) {
+      toast.error("PINs do not match. Please try again.");
+      return;
+    }
+    savePhonePePIN(myPrincipal, newPIN);
+    toast.success("PIN set successfully!");
     setStep("confirm");
   };
 
   const handlePay = () => {
-    saveMyPhonePeUPI(myPrincipal, myUPI.trim());
+    const storedPin = loadPhonePePIN(myPrincipal);
+    if (enteredPIN !== storedPin) {
+      setPinError(true);
+      setShake(true);
+      setTimeout(() => setShake(false), 600);
+      setTimeout(() => setPinError(false), 2000);
+      setEnteredPIN("");
+      return;
+    }
     setStep("done");
     toast.success(`Payment of ₹${amountINR} initiated to ${recipientName}!`);
   };
 
+  // Purple gradient header — always visible
+  const PurpleHeader = () => (
+    <div className="bg-gradient-to-br from-[#5f259f] to-[#8b44d4] px-6 pt-6 pb-8 -mx-6 -mt-4 rounded-t-xl text-white relative overflow-hidden">
+      {/* Decorative circles */}
+      <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full bg-white/5" />
+      <div className="absolute -bottom-4 -left-4 w-20 h-20 rounded-full bg-white/5" />
+      {/* Logo row */}
+      <div className="flex items-center gap-2 mb-4 relative z-10">
+        <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center shadow-md">
+          <span className="text-[#5f259f] font-black text-lg leading-none">
+            P
+          </span>
+        </div>
+        <span className="text-white font-bold text-lg tracking-wide">
+          PhonePe
+        </span>
+      </div>
+      {/* Amount */}
+      <div className="text-center relative z-10">
+        <div className="flex items-center justify-center gap-1 mb-1">
+          <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold">
+            {getInitials(recipientName)}
+          </div>
+        </div>
+        <p className="text-white/80 text-sm mb-1">Paying {recipientName}</p>
+        <p className="text-white text-4xl font-black tracking-tight">
+          ₹{amountINR.toLocaleString("en-IN")}
+        </p>
+        <p className="text-white/60 text-xs mt-1">
+          ₹{commission.toFixed(2)} platform fee · ₹
+          {recipientReceives.toFixed(2)} received
+        </p>
+      </div>
+    </div>
+  );
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent
-        className="bg-card border-border max-w-sm"
+        className="bg-white dark:bg-card border-0 max-w-sm p-6 pt-4 overflow-hidden"
         data-ocid="chat.phonepe_pay.dialog"
       >
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-foreground">
-            <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
-              <Phone className="w-4 h-4 text-purple-400" />
-            </div>
-            Pay via PhonePe
-          </DialogTitle>
-          <DialogDescription className="text-muted-foreground">
-            Send ₹{amountINR} to {recipientName}
-          </DialogDescription>
-        </DialogHeader>
+        <PurpleHeader />
 
-        {step === "done" ? (
-          <div className="py-6 text-center space-y-3">
-            <div className="w-14 h-14 rounded-full bg-green-500/15 flex items-center justify-center mx-auto">
-              <CheckCircle2 className="w-8 h-8 text-green-400" />
-            </div>
-            <p className="font-semibold text-foreground">Payment Initiated!</p>
-            <p className="text-sm text-muted-foreground">
-              Open your PhonePe app and complete the payment of ₹{amountINR} to{" "}
-              <span className="font-mono text-foreground">
-                {recipientPhonePe || "the recipient's UPI"}
-              </span>
-              .
-            </p>
-            <p className="text-[11px] text-muted-foreground">
-              1% platform fee (₹{commission.toFixed(2)}) collected via PhonePe{" "}
-              {PLATFORM_PHONEPE}
-            </p>
-            <Button
-              className="w-full bg-primary hover:bg-primary/90"
-              onClick={onClose}
+        <AnimatePresence mode="wait">
+          {/* ── Step: link (no UPI yet) ── */}
+          {step === "link" && (
+            <motion.div
+              key="link"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              className="mt-5 space-y-4"
             >
-              Done
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-4 py-1">
-            {/* Amount breakdown */}
-            <div className="rounded-lg border border-border bg-muted/20 p-3 text-xs space-y-1.5">
-              <div className="flex justify-between text-muted-foreground">
-                <span>Amount</span>
-                <span className="font-semibold text-foreground flex items-center gap-1">
-                  <IndianRupee className="w-3 h-3" />
-                  {amountINR}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-semibold text-gray-700">
+                  Your PhonePe UPI / Mobile
+                </Label>
+                <Input
+                  value={myUPI}
+                  onChange={(e) => setMyUPI(e.target.value)}
+                  placeholder="yourname@upi or 9999999999"
+                  className="border-gray-200 focus:border-purple-500 focus:ring-purple-200 bg-gray-50"
+                  data-ocid="chat.phonepe_link.upi_input"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-gray-700">
+                  Set a 4-digit PhonePe PIN
+                </Label>
+                <PinBoxes value={newPIN} onChange={setNewPIN} autoFocus />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-gray-700">
+                  Confirm PIN
+                </Label>
+                <PinBoxes value={confirmPIN} onChange={setConfirmPIN} />
+              </div>
+              <Button
+                className="w-full bg-gradient-to-r from-[#5f259f] to-[#8b44d4] hover:opacity-90 text-white font-bold h-12 text-base"
+                onClick={handleLink}
+                disabled={
+                  !myUPI.trim() || newPIN.length < 4 || confirmPIN.length < 4
+                }
+                data-ocid="chat.phonepe_link.button"
+              >
+                Link & Set PIN
+              </Button>
+            </motion.div>
+          )}
+
+          {/* ── Step: set_pin (has UPI but no PIN) ── */}
+          {step === "set_pin" && (
+            <motion.div
+              key="set_pin"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              className="mt-5 space-y-4"
+            >
+              <p className="text-center text-sm text-gray-500">
+                Create a PIN to secure your payments
+              </p>
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-gray-700">
+                  New 4-digit PIN
+                </Label>
+                <PinBoxes value={newPIN} onChange={setNewPIN} autoFocus />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-gray-700">
+                  Confirm PIN
+                </Label>
+                <PinBoxes value={confirmPIN} onChange={setConfirmPIN} />
+              </div>
+              <Button
+                className="w-full bg-gradient-to-r from-[#5f259f] to-[#8b44d4] hover:opacity-90 text-white font-bold h-12 text-base"
+                onClick={handleSetPin}
+                disabled={newPIN.length < 4 || confirmPIN.length < 4}
+                data-ocid="chat.phonepe_setpin.button"
+              >
+                Set PIN
+              </Button>
+            </motion.div>
+          )}
+
+          {/* ── Step: confirm (enter PIN to pay) ── */}
+          {step === "confirm" && (
+            <motion.div
+              key="confirm"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              className="mt-5 space-y-5"
+            >
+              <div className="text-center">
+                <p className="text-sm font-semibold text-gray-700">
+                  Enter your 4-digit PIN to pay
+                </p>
+                {recipientPhonePe && (
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    To: {recipientPhonePe}
+                  </p>
+                )}
+              </div>
+
+              <motion.div
+                animate={shake ? { x: [-8, 8, -8, 8, -4, 4, 0] } : {}}
+                transition={{ duration: 0.4 }}
+              >
+                <PinBoxes
+                  value={enteredPIN}
+                  onChange={setEnteredPIN}
+                  autoFocus
+                  hasError={pinError}
+                />
+              </motion.div>
+
+              {pinError && (
+                <p className="text-center text-sm text-red-500 font-medium">
+                  Incorrect PIN. Please try again.
+                </p>
+              )}
+
+              {/* Subtle commission breakdown */}
+              <div className="rounded-lg bg-gray-50 border border-gray-100 px-3 py-2 text-xs text-gray-500 flex justify-between">
+                <span>Platform fee (1%)</span>
+                <span>
+                  ₹{commission.toFixed(2)} → PhonePe {PLATFORM_PHONEPE}
                 </span>
               </div>
-              <div className="flex justify-between text-orange-400">
-                <span>Platform fee (1%)</span>
-                <span>− ₹{commission.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between font-semibold text-green-400 border-t border-border pt-1.5">
-                <span>{recipientName} receives</span>
-                <span>₹{recipientReceives.toFixed(2)}</span>
-              </div>
-              <p className="text-[10px] text-muted-foreground">
-                Fee collected via PhonePe {PLATFORM_PHONEPE}
-              </p>
-            </div>
 
-            {/* Recipient PhonePe */}
-            {recipientPhonePe && (
-              <div className="rounded-lg border border-purple-500/30 bg-purple-500/10 p-3 text-sm">
-                <p className="text-[11px] text-muted-foreground mb-1">
-                  Pay to (Recipient UPI)
-                </p>
-                <p className="font-mono font-semibold text-foreground">
-                  {recipientPhonePe}
-                </p>
-              </div>
-            )}
-
-            {/* My UPI */}
-            <div className="space-y-1.5">
-              <Label className="text-foreground text-xs">
-                Your PhonePe UPI / Mobile Number
-              </Label>
-              <Input
-                value={myUPI}
-                onChange={(e) => setMyUPI(e.target.value)}
-                placeholder="e.g. 9876543210 or yourname@ybl"
-                className="bg-input border-border text-sm h-9"
-                data-ocid="chat.phonepe_pay.upi_input"
-              />
-              <p className="text-[10px] text-muted-foreground">
-                Your UPI is saved locally for future payments.
-              </p>
-            </div>
-
-            <DialogFooter className="gap-2">
               <Button
-                variant="outline"
+                className="w-full bg-gradient-to-r from-[#5f259f] to-[#8b44d4] hover:opacity-90 text-white font-bold h-12 text-base"
+                onClick={handlePay}
+                disabled={enteredPIN.length < 4}
+                data-ocid="chat.phonepe_pay.button"
+              >
+                Pay ₹{amountINR.toLocaleString("en-IN")}
+              </Button>
+              <button
+                type="button"
                 onClick={onClose}
-                className="border-border"
+                className="w-full text-center text-sm text-gray-400 hover:text-gray-600 transition-colors"
+                data-ocid="chat.phonepe_pay.cancel_button"
               >
                 Cancel
+              </button>
+            </motion.div>
+          )}
+
+          {/* ── Step: done ── */}
+          {step === "done" && (
+            <motion.div
+              key="done"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="mt-5 text-center space-y-4"
+            >
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto"
+              >
+                <CheckCircle2 className="w-9 h-9 text-green-500" />
+              </motion.div>
+              <div>
+                <p className="font-bold text-gray-800 text-lg">
+                  Payment Initiated!
+                </p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Open PhonePe app to complete payment of ₹{amountINR} to{" "}
+                  <span className="font-mono font-semibold text-gray-700">
+                    {recipientPhonePe || recipientName}
+                  </span>
+                </p>
+              </div>
+              <Button
+                className="w-full bg-gradient-to-r from-[#5f259f] to-[#8b44d4] hover:opacity-90 text-white font-bold h-11"
+                onClick={onClose}
+                data-ocid="chat.phonepe_done.button"
+              >
+                Done
               </Button>
-              {step === "link" ? (
-                <Button
-                  onClick={handleLink}
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
-                  disabled={!myUPI.trim()}
-                  data-ocid="chat.phonepe_pay.link_button"
-                >
-                  <Phone className="w-4 h-4 mr-2" />
-                  Link & Continue
-                </Button>
-              ) : (
-                <Button
-                  onClick={handlePay}
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
-                  data-ocid="chat.phonepe_pay.pay_button"
-                >
-                  <Phone className="w-4 h-4 mr-2" />
-                  Pay ₹{amountINR}
-                </Button>
-              )}
-            </DialogFooter>
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </DialogContent>
     </Dialog>
   );
@@ -499,6 +775,66 @@ function ProposeTradeModal({
   );
 }
 
+// ─── SoundToggle ─────────────────────────────────────────────────────────────
+
+function SoundToggle() {
+  const [enabled, setEnabled] = useState(() => isSoundEnabled());
+
+  const toggle = () => {
+    const next = !enabled;
+    setSoundEnabled(next);
+    setEnabled(next);
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      title={
+        enabled ? "Mute notification sounds" : "Enable notification sounds"
+      }
+      className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+      data-ocid="chat.sound_toggle.button"
+    >
+      {enabled ? (
+        <svg
+          viewBox="0 0 24 24"
+          className="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          role="img"
+          aria-label="Sound on"
+        >
+          <title>Sound on</title>
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+        </svg>
+      ) : (
+        <svg
+          viewBox="0 0 24 24"
+          className="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          role="img"
+          aria-label="Sound off"
+        >
+          <title>Sound off</title>
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+          <line x1="23" y1="9" x2="17" y2="15" />
+          <line x1="17" y1="9" x2="23" y2="15" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
 // ─── ChatWindow ───────────────────────────────────────────────────────────────
 
 interface ChatWindowProps {
@@ -519,6 +855,33 @@ function ChatWindow({ partner, myPrincipal, onBack }: ChatWindowProps) {
   const sendMessage = useSendMessage();
   const respondToTrade = useRespondToTradeProposal();
   const qc = useQueryClient();
+  const prevMsgCountRef = useRef<number>(0);
+
+  // Play notification sound when new messages arrive from partner
+  useEffect(() => {
+    if (!messages) return;
+    const prev = prevMsgCountRef.current;
+    const current = messages.length;
+    if (current > prev && prev > 0) {
+      const newMsgs = messages.slice(prev);
+      const hasNewFromPartner = newMsgs.some(
+        (m) => m.sender.toString() !== myPrincipal,
+      );
+      if (hasNewFromPartner) {
+        const hasPayment = newMsgs.some(
+          (m) =>
+            m.sender.toString() !== myPrincipal &&
+            extractPaymentAmount(m.content) !== null,
+        );
+        if (hasPayment) {
+          playPaymentSound();
+        } else {
+          playMessageSound();
+        }
+      }
+    }
+    prevMsgCountRef.current = current;
+  }, [messages, myPrincipal]);
 
   const partnerVerified = isVerified(partnerPrincipal);
 
@@ -608,6 +971,7 @@ function ChatWindow({ partner, myPrincipal, onBack }: ChatWindowProps) {
             {truncatePrincipal(partnerPrincipal)}
           </p>
         </div>
+        <SoundToggle />
         <Button
           size="sm"
           variant="outline"
@@ -764,10 +1128,14 @@ function ChatWindow({ partner, myPrincipal, onBack }: ChatWindowProps) {
                     <button
                       type="button"
                       onClick={() => setPayDialogAmount(payAmount)}
-                      className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 transition-colors text-white text-xs font-semibold shadow-sm"
+                      className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-[#5f259f] to-[#8b44d4] hover:opacity-90 transition-opacity text-white text-xs font-bold shadow-md"
                       data-ocid="chat.phonepe_pay.inline_button"
                     >
-                      <Phone className="w-3.5 h-3.5" />
+                      <div className="w-4 h-4 rounded-full bg-white flex items-center justify-center">
+                        <span className="text-[#5f259f] font-black text-[9px] leading-none">
+                          P
+                        </span>
+                      </div>
                       Pay ₹{payAmount} via PhonePe
                     </button>
                   )}
@@ -852,6 +1220,18 @@ export default function ChatTab() {
   const qc = useQueryClient();
 
   const { data: allUsers, isLoading: usersLoading, refetch } = useGetAllUsers();
+  const { data: unreadTotal } = useUnreadMessageCount(myPrincipal);
+  const prevUnreadRef = useRef<number>(0);
+
+  // Play sound when new unread messages arrive (while not in a conversation)
+  useEffect(() => {
+    if (unreadTotal === undefined) return;
+    const prev = prevUnreadRef.current;
+    if (unreadTotal > prev && !selectedUser) {
+      playMessageSound();
+    }
+    prevUnreadRef.current = unreadTotal;
+  }, [unreadTotal, selectedUser]);
 
   const allPrincipalStrings = (allUsers ?? []).map((e) =>
     e.principal.toString(),

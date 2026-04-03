@@ -29,10 +29,12 @@ import { toast } from "sonner";
 import type { Site } from "../backend";
 import { Layout } from "../components/Layout";
 import { loadSellerAccounts } from "../components/ListSiteModal";
+import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
   useCreateCheckoutSession,
   useGetMarketplaceListings,
 } from "../hooks/useQueries";
+import { PinBoxes, hasPhonePePIN, loadPhonePePIN } from "./ChatTab";
 
 const CATEGORIES = [
   "All",
@@ -271,16 +273,22 @@ function SiteDetailModal({
   onClose: () => void;
 }) {
   const createCheckout = useCreateCheckoutSession();
+  const { identity } = useInternetIdentity();
+  const myPrincipal = identity?.getPrincipal().toString() ?? "";
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(
     null,
   );
   const [paymentInput, setPaymentInput] = useState("");
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const [marketplacePIN, setMarketplacePIN] = useState("");
+  const [pinError, setPinError] = useState(false);
 
   const handleClose = () => {
     setSelectedMethod(null);
     setPaymentInput("");
     setPaymentLoading(false);
+    setMarketplacePIN("");
+    setPinError(false);
     onClose();
   };
 
@@ -327,6 +335,19 @@ function SiteDetailModal({
         await simulatePayment("Redirecting to PayPal...");
         break;
       case "phonepe":
+        if (hasPhonePePIN(myPrincipal)) {
+          if (marketplacePIN.length < 4) {
+            toast.error("Enter your 4-digit PhonePe PIN.");
+            return;
+          }
+          if (marketplacePIN !== loadPhonePePIN(myPrincipal)) {
+            setPinError(true);
+            setMarketplacePIN("");
+            toast.error("Incorrect PIN. Please try again.");
+            setTimeout(() => setPinError(false), 2000);
+            return;
+          }
+        }
         await simulatePayment("PhonePe payment initiated!");
         break;
       case "fampay":
@@ -551,15 +572,41 @@ function SiteDetailModal({
                         className="bg-card border-border"
                         data-ocid="marketplace.phonepe_upi.input"
                       />
+                      {/* PIN verification if user has set a PIN */}
+                      {hasPhonePePIN(myPrincipal) && (
+                        <div className="space-y-2 pt-1">
+                          <p className="text-sm font-semibold text-foreground text-center">
+                            Enter your PhonePe PIN
+                          </p>
+                          <PinBoxes
+                            value={marketplacePIN}
+                            onChange={(v) => {
+                              setMarketplacePIN(v);
+                              setPinError(false);
+                            }}
+                            autoFocus
+                            hasError={pinError}
+                          />
+                          {pinError && (
+                            <p className="text-center text-xs text-red-500 font-medium">
+                              Incorrect PIN
+                            </p>
+                          )}
+                        </div>
+                      )}
                       <CommissionBox priceInCents={price} currency="inr" />
                       <p className="text-[11px] text-muted-foreground">
                         Payment gateway coming soon. This initiates a payment
                         request.
                       </p>
                       <Button
-                        className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold h-11"
+                        className="w-full bg-gradient-to-r from-[#5f259f] to-[#8b44d4] hover:opacity-90 text-white font-semibold h-11"
                         onClick={handleAltPayment}
-                        disabled={paymentLoading}
+                        disabled={
+                          paymentLoading ||
+                          (hasPhonePePIN(myPrincipal) &&
+                            marketplacePIN.length < 4)
+                        }
                         data-ocid="marketplace.phonepe_payment.button"
                       >
                         {paymentLoading ? (
@@ -569,7 +616,12 @@ function SiteDetailModal({
                           </>
                         ) : (
                           <>
-                            <Phone className="w-4 h-4 mr-2" /> Pay with PhonePe
+                            <div className="w-4 h-4 rounded-full bg-white flex items-center justify-center mr-2">
+                              <span className="text-[#5f259f] font-black text-[9px] leading-none">
+                                P
+                              </span>
+                            </div>
+                            Pay with PhonePe
                           </>
                         )}
                       </Button>
