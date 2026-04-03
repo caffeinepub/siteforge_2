@@ -1,5 +1,6 @@
 import Map "mo:core/Map";
 import List "mo:core/List";
+import Iter "mo:core/Iter";
 import Principal "mo:core/Principal";
 import Runtime "mo:core/Runtime";
 import Text "mo:core/Text";
@@ -10,11 +11,9 @@ import Stripe "stripe/stripe";
 import OutCall "http-outcalls/outcall";
 import AccessControl "authorization/access-control";
 import MixinAuthorization "authorization/MixinAuthorization";
+import Array "mo:core/Array";
 
 actor {
-  let accessControlState = AccessControl.initState();
-  include MixinAuthorization(accessControlState);
-
   type Site = {
     id : Text;
     title : Text;
@@ -76,10 +75,30 @@ actor {
     transactions : [Transaction];
   };
 
+  type ChatMessage = {
+    id : Text;
+    sender : Principal;
+    receiver : Principal;
+    content : Text;
+    timestamp : Int;
+    tradeProposalSiteId : ?Text;
+    tradeProposalSiteTitle : ?Text;
+    tradeProposalStatus : ?{ #pending; #accepted; #declined };
+  };
+
+  public type UserDirectoryEntry = {
+    principal : Principal;
+    profile : ?UserProfile;
+  };
+
+  let accessControlState = AccessControl.initState();
+  include MixinAuthorization(accessControlState);
+
   let sites = Map.empty<Text, Site>();
   let userProfiles = Map.empty<Principal, UserProfile>();
   let transactions = Map.empty<Text, Transaction>();
   let loginEvents = List.empty<LoginEvent>();
+  let chatMessages = Map.empty<Text, List.List<ChatMessage>>();
 
   func getSite(siteId : Text) : Site {
     switch (sites.get(siteId)) {
@@ -102,10 +121,15 @@ actor {
     id.toText();
   };
 
-  // Record a login event for the caller
   public shared ({ caller }) func recordLogin() : async () {
     if (caller.isAnonymous()) {
       Runtime.trap("Anonymous principals cannot record login");
+    };
+    switch (accessControlState.userRoles.get(caller)) {
+      case (null) {
+        accessControlState.userRoles.add(caller, #user);
+      };
+      case (?_) {};
     };
     let event : LoginEvent = {
       principal = caller;
@@ -114,12 +138,10 @@ actor {
     loginEvents.add(event);
   };
 
-  // Get all login events (intended for admin use)
   public query func getLoginEvents() : async [LoginEvent] {
     loginEvents.toArray();
   };
 
-  // Public query - anyone can view site details
   public query func getSiteById(siteId : Text) : async Site {
     getSite(siteId);
   };
@@ -255,7 +277,6 @@ actor {
     sites.add(siteId, updatedSite);
   };
 
-  // Public query - anyone can browse marketplace
   public query func getMarketplaceListings() : async [Site] {
     let listings = List.empty<Site>();
     for (site in sites.values()) {
@@ -269,7 +290,6 @@ actor {
     listings.toArray();
   };
 
-  // Public query - anyone can browse marketplace
   public query func getMarketplaceListingIds() : async [Text] {
     let listingIds = List.empty<Text>();
     for (site in sites.values()) {
@@ -396,7 +416,6 @@ actor {
     userProfiles.add(caller, profile);
   };
 
-  // Public query - anyone can view profiles (required by frontend)
   public query func getProfile(user : Principal) : async UserProfile {
     if (userProfiles.containsKey(user)) {
       switch (userProfiles.get(user)) {
@@ -429,7 +448,6 @@ actor {
     userProfiles.add(caller, updatedProfile);
   };
 
-  // Required by frontend - get caller's own profile
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can access profiles");
@@ -437,7 +455,6 @@ actor {
     userProfiles.get(caller);
   };
 
-  // Required by frontend - save caller's own profile
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can save profiles");
@@ -445,7 +462,6 @@ actor {
     userProfiles.add(caller, profile);
   };
 
-  // Required by frontend - get another user's profile
   public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
     if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
       Runtime.trap("Unauthorized: Can only view your own profile");
@@ -504,7 +520,6 @@ actor {
     transaction;
   };
 
-  // Public query - anyone can search sites
   public query func getSiteByTitle(title : Text) : async Site {
     let matchingSites = List.empty<Site>();
     for (site in sites.values()) {
@@ -520,7 +535,6 @@ actor {
     };
   };
 
-  // Public query - anyone can view sites by owner
   public query func getSitesByOwner(owner : Principal) : async [Site] {
     let ownerSites = List.empty<Site>();
     for (site in sites.values()) {
@@ -531,7 +545,6 @@ actor {
     ownerSites.toArray();
   };
 
-  // Public query - anyone can check if site is listed
   public query func isSiteListed(siteId : Text) : async Bool {
     let site = getSite(siteId);
     switch (site.status) {
@@ -573,5 +586,178 @@ actor {
       Runtime.trap("Unauthorized: Only users can create checkout sessions");
     };
     await Stripe.createCheckoutSession(getStripeConfig(), caller, items, successUrl, cancelUrl, transform);
+  };
+
+  func getConversationId(id1 : Principal, id2 : Principal) : Text {
+    if (id1.toText() < id2.toText()) {
+      id1.toText() # "-" # id2.toText();
+    } else {
+      id2.toText() # "-" # id1.toText();
+    };
+  };
+
+  // Send message
+  public shared ({ caller }) func sendMessage(to : Principal, content : Text) : async Text {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can send messages");
+    };
+    if (to.isAnonymous() or caller.isAnonymous()) {
+      Runtime.trap("Cannot send message to or from anonymous principal");
+    };
+    if (to == caller) {
+      Runtime.trap("Cannot send message to yourself");
+    };
+
+    let messageId = generateUniqueId();
+    let newMessage : ChatMessage = {
+      id = messageId;
+      sender = caller;
+      receiver = to;
+      content;
+      timestamp = Time.now();
+      tradeProposalSiteId = null;
+      tradeProposalSiteTitle = null;
+      tradeProposalStatus = null;
+    };
+
+    let conversationId = getConversationId(caller, to);
+    let existingMessages = switch (chatMessages.get(conversationId)) {
+      case (?messages) { messages };
+      case (null) { List.empty<ChatMessage>() };
+    };
+
+    existingMessages.add(newMessage);
+    chatMessages.add(conversationId, existingMessages);
+    messageId;
+  };
+
+  // Propose trade
+  public shared ({ caller }) func proposeTrade(to : Principal, siteId : Text) : async Text {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can propose trades");
+    };
+    if (to.isAnonymous() or caller.isAnonymous()) {
+      Runtime.trap("Cannot propose trade to or from anonymous principal");
+    };
+    if (to == caller) {
+      Runtime.trap("Cannot propose trade to yourself");
+    };
+
+    let site = getSite(siteId);
+    let messageId = generateUniqueId();
+
+    let tradeMessage : ChatMessage = {
+      id = messageId;
+      sender = caller;
+      receiver = to;
+      content = "Trade proposal for site: " # site.title;
+      timestamp = Time.now();
+      tradeProposalSiteId = ?siteId;
+      tradeProposalSiteTitle = ?site.title;
+      tradeProposalStatus = ?#pending;
+    };
+
+    let conversationId = getConversationId(caller, to);
+    let existingMessages = switch (chatMessages.get(conversationId)) {
+      case (?messages) { messages };
+      case (null) { List.empty<ChatMessage>() };
+    };
+
+    existingMessages.add(tradeMessage);
+    chatMessages.add(conversationId, existingMessages);
+    messageId;
+  };
+
+  // Accept or decline trade proposal
+  public shared ({ caller }) func respondToTradeProposal(messageId : Text, accept : Bool) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can respond to trade proposals");
+    };
+    var found = false;
+    for (id1 in chatMessages.keys()) {
+      let messages = chatMessages.get(id1);
+      let messagesToUpdate = switch (messages) {
+        case (null) { Runtime.trap("The messages should have been in the map. This is a bug."); };
+        case (?messages) { messages };
+      };
+      let updatedMessages = messagesToUpdate.map<ChatMessage, ChatMessage>(
+        func(msg) {
+          if (msg.id == messageId) {
+            found := true;
+            if (msg.receiver != caller) {
+              Runtime.trap("Unauthorized: Only the receiver can respond to this trade proposal");
+            } else if (msg.tradeProposalSiteId == null or msg.tradeProposalStatus == null) {
+              Runtime.trap("Message is not a trade proposal");
+            } else if (?#pending != msg.tradeProposalStatus) {
+              Runtime.trap("Trade proposal already responded to");
+            };
+            {
+              id = msg.id;
+              sender = msg.sender;
+              receiver = msg.receiver;
+              content = msg.content;
+              timestamp = msg.timestamp;
+              tradeProposalSiteId = msg.tradeProposalSiteId;
+              tradeProposalSiteTitle = msg.tradeProposalSiteTitle;
+              tradeProposalStatus = ?(if (accept) { #accepted } else { #declined });
+            };
+          } else {
+            msg;
+          };
+        }
+      );
+      chatMessages.add(id1, updatedMessages);
+    };
+    if (not found) {
+      Runtime.trap("Trade proposal message not found");
+    };
+  };
+
+  // Get messages
+  public shared ({ caller }) func getMessages(partner : Principal) : async [ChatMessage] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view messages");
+    };
+    if (partner.isAnonymous() or caller.isAnonymous()) {
+      Runtime.trap("Cannot retrieve conversation with anonymous principal");
+    };
+
+    let conversationId = getConversationId(caller, partner);
+    switch (chatMessages.get(conversationId)) {
+      case (?messages) {
+        messages.toArray();
+      };
+      case (null) {
+        [];
+      };
+    };
+  };
+
+  public query ({ caller }) func getAllUsers() : async [UserDirectoryEntry] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view the user directory");
+    };
+    let directoryList = List.empty<UserDirectoryEntry>();
+
+    for (event in loginEvents.values()) {
+      let principal = event.principal;
+      let alreadyAdded = directoryList.find(
+        func(entry) {
+          entry.principal == principal;
+        }
+      );
+
+      switch (alreadyAdded) {
+        case (null) {
+          directoryList.add({
+            principal;
+            profile = userProfiles.get(principal);
+          });
+        };
+        case (_) {};
+      };
+    };
+
+    directoryList.toArray();
   };
 };

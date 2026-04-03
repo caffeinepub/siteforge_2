@@ -10,6 +10,20 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
+export interface ChatMessage {
+  'id' : string,
+  'tradeProposalStatus' : [] | [
+    { 'pending' : null } |
+      { 'accepted' : null } |
+      { 'declined' : null }
+  ],
+  'content' : string,
+  'sender' : Principal,
+  'timestamp' : bigint,
+  'tradeProposalSiteId' : [] | [string],
+  'receiver' : Principal,
+  'tradeProposalSiteTitle' : [] | [string],
+}
 export interface Dashboard {
   'listings' : Array<Site>,
   'sites' : Array<Site>,
@@ -20,6 +34,7 @@ export interface Listing {
   'price' : bigint,
   'listingDescription' : string,
 }
+export interface LoginEvent { 'principal' : Principal, 'loginAt' : bigint }
 export interface ShoppingItem {
   'productName' : string,
   'currency' : string,
@@ -75,6 +90,10 @@ export interface TransformationOutput {
   'body' : Uint8Array,
   'headers' : Array<http_header>,
 }
+export interface UserDirectoryEntry {
+  'principal' : Principal,
+  'profile' : [] | [UserProfile],
+}
 export interface UserProfile {
   'bio' : string,
   'username' : string,
@@ -101,10 +120,13 @@ export interface _SERVICE {
   'createProfile' : ActorMethod<[string, string, string], undefined>,
   'createSite' : ActorMethod<[string, string, string], string>,
   'finalizeTransaction' : ActorMethod<[string, string], undefined>,
+  'getAllUsers' : ActorMethod<[], Array<UserDirectoryEntry>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
+  'getLoginEvents' : ActorMethod<[], Array<LoginEvent>>,
   'getMarketplaceListingIds' : ActorMethod<[], Array<string>>,
   'getMarketplaceListings' : ActorMethod<[], Array<Site>>,
+  'getMessages' : ActorMethod<[Principal], Array<ChatMessage>>,
   'getProfile' : ActorMethod<[Principal], UserProfile>,
   'getSiteById' : ActorMethod<[string], Site>,
   'getSiteByTitle' : ActorMethod<[string], Site>,
@@ -117,8 +139,12 @@ export interface _SERVICE {
   'isSiteListed' : ActorMethod<[string], boolean>,
   'isStripeConfigured' : ActorMethod<[], boolean>,
   'listSite' : ActorMethod<[string, bigint, string], undefined>,
+  'proposeTrade' : ActorMethod<[Principal, string], string>,
   'publishSite' : ActorMethod<[string], string>,
+  'recordLogin' : ActorMethod<[], undefined>,
+  'respondToTradeProposal' : ActorMethod<[string, boolean], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
+  'sendMessage' : ActorMethod<[Principal, string], string>,
   'setStripeConfiguration' : ActorMethod<[StripeConfiguration], undefined>,
   'transform' : ActorMethod<[TransformationInput], TransformationOutput>,
   'unlistSite' : ActorMethod<[string], undefined>,

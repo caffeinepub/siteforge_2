@@ -89,6 +89,24 @@ export class ExternalBlob {
         return this;
     }
 }
+export interface UserDirectoryEntry {
+    principal: Principal;
+    profile?: UserProfile;
+}
+export interface TransformationOutput {
+    status: bigint;
+    body: Uint8Array;
+    headers: Array<http_header>;
+}
+export interface Listing {
+    listedAt: bigint;
+    price: bigint;
+    listingDescription: string;
+}
+export interface LoginEvent {
+    principal: Principal;
+    loginAt: bigint;
+}
 export interface http_header {
     value: string;
     name: string;
@@ -98,10 +116,33 @@ export interface http_request_result {
     body: Uint8Array;
     headers: Array<http_header>;
 }
-export interface TransformationOutput {
-    status: bigint;
-    body: Uint8Array;
-    headers: Array<http_header>;
+export interface Transaction {
+    id: string;
+    status: {
+        __kind__: "cancelled";
+        cancelled: string;
+    } | {
+        __kind__: "pending";
+        pending: string;
+    } | {
+        __kind__: "completed";
+        completed: {
+            billOfSale: string;
+        };
+    };
+    createdAt: bigint;
+    seller: Principal;
+    stripePaymentIntentId: string;
+    buyer: Principal;
+    siteId: string;
+    price: bigint;
+}
+export interface ShoppingItem {
+    productName: string;
+    currency: string;
+    quantity: bigint;
+    priceInCents: bigint;
+    productDescription: string;
 }
 export interface Site {
     id: string;
@@ -129,26 +170,24 @@ export interface Site {
     description: string;
     updatedAt: bigint;
 }
-export interface ShoppingItem {
-    productName: string;
-    currency: string;
-    quantity: bigint;
-    priceInCents: bigint;
-    productDescription: string;
-}
 export interface TransformationInput {
     context: Uint8Array;
     response: http_request_result;
-}
-export interface Listing {
-    listedAt: bigint;
-    price: bigint;
-    listingDescription: string;
 }
 export interface Dashboard {
     listings: Array<Site>;
     sites: Array<Site>;
     transactions: Array<Transaction>;
+}
+export interface ChatMessage {
+    id: string;
+    tradeProposalStatus?: Variant_pending_accepted_declined;
+    content: string;
+    sender: Principal;
+    timestamp: bigint;
+    tradeProposalSiteId?: string;
+    receiver: Principal;
+    tradeProposalSiteTitle?: string;
 }
 export type StripeSessionStatus = {
     __kind__: "completed";
@@ -172,31 +211,15 @@ export interface UserProfile {
     displayName: string;
     joinedAt: bigint;
 }
-export interface Transaction {
-    id: string;
-    status: {
-        __kind__: "cancelled";
-        cancelled: string;
-    } | {
-        __kind__: "pending";
-        pending: string;
-    } | {
-        __kind__: "completed";
-        completed: {
-            billOfSale: string;
-        };
-    };
-    createdAt: bigint;
-    seller: Principal;
-    stripePaymentIntentId: string;
-    buyer: Principal;
-    siteId: string;
-    price: bigint;
-}
 export enum UserRole {
     admin = "admin",
     user = "user",
     guest = "guest"
+}
+export enum Variant_pending_accepted_declined {
+    pending = "pending",
+    accepted = "accepted",
+    declined = "declined"
 }
 export interface backendInterface {
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
@@ -206,10 +229,13 @@ export interface backendInterface {
     createProfile(username: string, displayName: string, bio: string): Promise<void>;
     createSite(title: string, description: string, content: string): Promise<string>;
     finalizeTransaction(transactionId: string, billOfSale: string): Promise<void>;
+    getAllUsers(): Promise<Array<UserDirectoryEntry>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
+    getLoginEvents(): Promise<Array<LoginEvent>>;
     getMarketplaceListingIds(): Promise<Array<string>>;
     getMarketplaceListings(): Promise<Array<Site>>;
+    getMessages(partner: Principal): Promise<Array<ChatMessage>>;
     getProfile(user: Principal): Promise<UserProfile>;
     getSiteById(siteId: string): Promise<Site>;
     getSiteByTitle(title: string): Promise<Site>;
@@ -222,8 +248,12 @@ export interface backendInterface {
     isSiteListed(siteId: string): Promise<boolean>;
     isStripeConfigured(): Promise<boolean>;
     listSite(id: string, price: bigint, listingDescription: string): Promise<void>;
+    proposeTrade(to: Principal, siteId: string): Promise<string>;
     publishSite(siteId: string): Promise<string>;
+    recordLogin(): Promise<void>;
+    respondToTradeProposal(messageId: string, accept: boolean): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    sendMessage(to: Principal, content: string): Promise<string>;
     setStripeConfiguration(config: StripeConfiguration): Promise<void>;
     transform(input: TransformationInput): Promise<TransformationOutput>;
     unlistSite(siteId: string): Promise<void>;
@@ -232,7 +262,7 @@ export interface backendInterface {
     updateSite(id: string, title: string, description: string, content: string): Promise<void>;
     updateUsername(username: string): Promise<void>;
 }
-import type { Dashboard as _Dashboard, Listing as _Listing, Site as _Site, StripeSessionStatus as _StripeSessionStatus, Transaction as _Transaction, UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
+import type { ChatMessage as _ChatMessage, Dashboard as _Dashboard, Listing as _Listing, Site as _Site, StripeSessionStatus as _StripeSessionStatus, Transaction as _Transaction, UserDirectoryEntry as _UserDirectoryEntry, UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async _initializeAccessControlWithSecret(arg0: string): Promise<void> {
@@ -333,32 +363,60 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async getAllUsers(): Promise<Array<UserDirectoryEntry>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAllUsers();
+                return from_candid_vec_n3(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAllUsers();
+            return from_candid_vec_n3(this._uploadFile, this._downloadFile, result);
+        }
+    }
     async getCallerUserProfile(): Promise<UserProfile | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getCallerUserProfile();
-                return from_candid_opt_n3(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n6(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getCallerUserProfile();
-            return from_candid_opt_n3(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n6(this._uploadFile, this._downloadFile, result);
         }
     }
     async getCallerUserRole(): Promise<UserRole> {
         if (this.processError) {
             try {
                 const result = await this.actor.getCallerUserRole();
-                return from_candid_UserRole_n4(this._uploadFile, this._downloadFile, result);
+                return from_candid_UserRole_n7(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getCallerUserRole();
-            return from_candid_UserRole_n4(this._uploadFile, this._downloadFile, result);
+            return from_candid_UserRole_n7(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getLoginEvents(): Promise<Array<LoginEvent>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getLoginEvents();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getLoginEvents();
+            return result;
         }
     }
     async getMarketplaceListingIds(): Promise<Array<string>> {
@@ -379,14 +437,28 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.getMarketplaceListings();
-                return from_candid_vec_n6(this._uploadFile, this._downloadFile, result);
+                return from_candid_vec_n9(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getMarketplaceListings();
-            return from_candid_vec_n6(this._uploadFile, this._downloadFile, result);
+            return from_candid_vec_n9(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getMessages(arg0: Principal): Promise<Array<ChatMessage>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getMessages(arg0);
+                return from_candid_vec_n13(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getMessages(arg0);
+            return from_candid_vec_n13(this._uploadFile, this._downloadFile, result);
         }
     }
     async getProfile(arg0: Principal): Promise<UserProfile> {
@@ -407,98 +479,98 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.getSiteById(arg0);
-                return from_candid_Site_n7(this._uploadFile, this._downloadFile, result);
+                return from_candid_Site_n10(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getSiteById(arg0);
-            return from_candid_Site_n7(this._uploadFile, this._downloadFile, result);
+            return from_candid_Site_n10(this._uploadFile, this._downloadFile, result);
         }
     }
     async getSiteByTitle(arg0: string): Promise<Site> {
         if (this.processError) {
             try {
                 const result = await this.actor.getSiteByTitle(arg0);
-                return from_candid_Site_n7(this._uploadFile, this._downloadFile, result);
+                return from_candid_Site_n10(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getSiteByTitle(arg0);
-            return from_candid_Site_n7(this._uploadFile, this._downloadFile, result);
+            return from_candid_Site_n10(this._uploadFile, this._downloadFile, result);
         }
     }
     async getSitesByOwner(arg0: Principal): Promise<Array<Site>> {
         if (this.processError) {
             try {
                 const result = await this.actor.getSitesByOwner(arg0);
-                return from_candid_vec_n6(this._uploadFile, this._downloadFile, result);
+                return from_candid_vec_n9(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getSitesByOwner(arg0);
-            return from_candid_vec_n6(this._uploadFile, this._downloadFile, result);
+            return from_candid_vec_n9(this._uploadFile, this._downloadFile, result);
         }
     }
     async getStripeSessionStatus(arg0: string): Promise<StripeSessionStatus> {
         if (this.processError) {
             try {
                 const result = await this.actor.getStripeSessionStatus(arg0);
-                return from_candid_StripeSessionStatus_n10(this._uploadFile, this._downloadFile, result);
+                return from_candid_StripeSessionStatus_n19(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getStripeSessionStatus(arg0);
-            return from_candid_StripeSessionStatus_n10(this._uploadFile, this._downloadFile, result);
+            return from_candid_StripeSessionStatus_n19(this._uploadFile, this._downloadFile, result);
         }
     }
     async getTransactionById(arg0: string): Promise<Transaction> {
         if (this.processError) {
             try {
                 const result = await this.actor.getTransactionById(arg0);
-                return from_candid_Transaction_n14(this._uploadFile, this._downloadFile, result);
+                return from_candid_Transaction_n22(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getTransactionById(arg0);
-            return from_candid_Transaction_n14(this._uploadFile, this._downloadFile, result);
+            return from_candid_Transaction_n22(this._uploadFile, this._downloadFile, result);
         }
     }
     async getUserDashboard(): Promise<Dashboard> {
         if (this.processError) {
             try {
                 const result = await this.actor.getUserDashboard();
-                return from_candid_Dashboard_n17(this._uploadFile, this._downloadFile, result);
+                return from_candid_Dashboard_n25(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getUserDashboard();
-            return from_candid_Dashboard_n17(this._uploadFile, this._downloadFile, result);
+            return from_candid_Dashboard_n25(this._uploadFile, this._downloadFile, result);
         }
     }
     async getUserProfile(arg0: Principal): Promise<UserProfile | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getUserProfile(arg0);
-                return from_candid_opt_n3(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n6(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getUserProfile(arg0);
-            return from_candid_opt_n3(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n6(this._uploadFile, this._downloadFile, result);
         }
     }
     async isCallerAdmin(): Promise<boolean> {
@@ -557,6 +629,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async proposeTrade(arg0: Principal, arg1: string): Promise<string> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.proposeTrade(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.proposeTrade(arg0, arg1);
+            return result;
+        }
+    }
     async publishSite(arg0: string): Promise<string> {
         if (this.processError) {
             try {
@@ -571,6 +657,34 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async recordLogin(): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.recordLogin();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.recordLogin();
+            return result;
+        }
+    }
+    async respondToTradeProposal(arg0: string, arg1: boolean): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.respondToTradeProposal(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.respondToTradeProposal(arg0, arg1);
+            return result;
+        }
+    }
     async saveCallerUserProfile(arg0: UserProfile): Promise<void> {
         if (this.processError) {
             try {
@@ -582,6 +696,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.saveCallerUserProfile(arg0);
+            return result;
+        }
+    }
+    async sendMessage(arg0: Principal, arg1: string): Promise<string> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.sendMessage(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.sendMessage(arg0, arg1);
             return result;
         }
     }
@@ -684,104 +812,43 @@ export class Backend implements backendInterface {
         }
     }
 }
-function from_candid_Dashboard_n17(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Dashboard): Dashboard {
-    return from_candid_record_n18(_uploadFile, _downloadFile, value);
-}
-function from_candid_Site_n7(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Site): Site {
-    return from_candid_record_n8(_uploadFile, _downloadFile, value);
-}
-function from_candid_StripeSessionStatus_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _StripeSessionStatus): StripeSessionStatus {
-    return from_candid_variant_n11(_uploadFile, _downloadFile, value);
-}
-function from_candid_Transaction_n14(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Transaction): Transaction {
+function from_candid_ChatMessage_n14(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ChatMessage): ChatMessage {
     return from_candid_record_n15(_uploadFile, _downloadFile, value);
 }
-function from_candid_UserRole_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserRole): UserRole {
-    return from_candid_variant_n5(_uploadFile, _downloadFile, value);
+function from_candid_Dashboard_n25(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Dashboard): Dashboard {
+    return from_candid_record_n26(_uploadFile, _downloadFile, value);
 }
-function from_candid_opt_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [string]): string | null {
+function from_candid_Site_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Site): Site {
+    return from_candid_record_n11(_uploadFile, _downloadFile, value);
+}
+function from_candid_StripeSessionStatus_n19(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _StripeSessionStatus): StripeSessionStatus {
+    return from_candid_variant_n20(_uploadFile, _downloadFile, value);
+}
+function from_candid_Transaction_n22(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Transaction): Transaction {
+    return from_candid_record_n23(_uploadFile, _downloadFile, value);
+}
+function from_candid_UserDirectoryEntry_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserDirectoryEntry): UserDirectoryEntry {
+    return from_candid_record_n5(_uploadFile, _downloadFile, value);
+}
+function from_candid_UserRole_n7(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserRole): UserRole {
+    return from_candid_variant_n8(_uploadFile, _downloadFile, value);
+}
+function from_candid_opt_n16(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [{
+        pending: null;
+    } | {
+        accepted: null;
+    } | {
+        declined: null;
+    }]): Variant_pending_accepted_declined | null {
+    return value.length === 0 ? null : from_candid_variant_n17(_uploadFile, _downloadFile, value[0]);
+}
+function from_candid_opt_n18(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [string]): string | null {
     return value.length === 0 ? null : value[0];
 }
-function from_candid_opt_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_UserProfile]): UserProfile | null {
+function from_candid_opt_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_UserProfile]): UserProfile | null {
     return value.length === 0 ? null : value[0];
 }
-function from_candid_record_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    userPrincipal: [] | [string];
-    response: string;
-}): {
-    userPrincipal?: string;
-    response: string;
-} {
-    return {
-        userPrincipal: record_opt_to_undefined(from_candid_opt_n13(_uploadFile, _downloadFile, value.userPrincipal)),
-        response: value.response
-    };
-}
-function from_candid_record_n15(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    id: string;
-    status: {
-        cancelled: string;
-    } | {
-        pending: string;
-    } | {
-        completed: {
-            billOfSale: string;
-        };
-    };
-    createdAt: bigint;
-    seller: Principal;
-    stripePaymentIntentId: string;
-    buyer: Principal;
-    siteId: string;
-    price: bigint;
-}): {
-    id: string;
-    status: {
-        __kind__: "cancelled";
-        cancelled: string;
-    } | {
-        __kind__: "pending";
-        pending: string;
-    } | {
-        __kind__: "completed";
-        completed: {
-            billOfSale: string;
-        };
-    };
-    createdAt: bigint;
-    seller: Principal;
-    stripePaymentIntentId: string;
-    buyer: Principal;
-    siteId: string;
-    price: bigint;
-} {
-    return {
-        id: value.id,
-        status: from_candid_variant_n16(_uploadFile, _downloadFile, value.status),
-        createdAt: value.createdAt,
-        seller: value.seller,
-        stripePaymentIntentId: value.stripePaymentIntentId,
-        buyer: value.buyer,
-        siteId: value.siteId,
-        price: value.price
-    };
-}
-function from_candid_record_n18(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    listings: Array<_Site>;
-    sites: Array<_Site>;
-    transactions: Array<_Transaction>;
-}): {
-    listings: Array<Site>;
-    sites: Array<Site>;
-    transactions: Array<Transaction>;
-} {
-    return {
-        listings: from_candid_vec_n6(_uploadFile, _downloadFile, value.listings),
-        sites: from_candid_vec_n6(_uploadFile, _downloadFile, value.sites),
-        transactions: from_candid_vec_n19(_uploadFile, _downloadFile, value.transactions)
-    };
-}
-function from_candid_record_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_record_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     id: string;
     status: {
         published: string;
@@ -830,7 +897,7 @@ function from_candid_record_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint
 } {
     return {
         id: value.id,
-        status: from_candid_variant_n9(_uploadFile, _downloadFile, value.status),
+        status: from_candid_variant_n12(_uploadFile, _downloadFile, value.status),
         title: value.title,
         content: value.content,
         owner: value.owner,
@@ -839,76 +906,131 @@ function from_candid_record_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint
         updatedAt: value.updatedAt
     };
 }
-function from_candid_variant_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    completed: {
-        userPrincipal: [] | [string];
-        response: string;
-    };
-} | {
-    failed: {
-        error: string;
-    };
+function from_candid_record_n15(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    id: string;
+    tradeProposalStatus: [] | [{
+            pending: null;
+        } | {
+            accepted: null;
+        } | {
+            declined: null;
+        }];
+    content: string;
+    sender: Principal;
+    timestamp: bigint;
+    tradeProposalSiteId: [] | [string];
+    receiver: Principal;
+    tradeProposalSiteTitle: [] | [string];
 }): {
-    __kind__: "completed";
-    completed: {
-        userPrincipal?: string;
-        response: string;
-    };
-} | {
-    __kind__: "failed";
-    failed: {
-        error: string;
-    };
+    id: string;
+    tradeProposalStatus?: Variant_pending_accepted_declined;
+    content: string;
+    sender: Principal;
+    timestamp: bigint;
+    tradeProposalSiteId?: string;
+    receiver: Principal;
+    tradeProposalSiteTitle?: string;
 } {
-    return "completed" in value ? {
-        __kind__: "completed",
-        completed: from_candid_record_n12(_uploadFile, _downloadFile, value.completed)
-    } : "failed" in value ? {
-        __kind__: "failed",
-        failed: value.failed
-    } : value;
-}
-function from_candid_variant_n16(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    cancelled: string;
-} | {
-    pending: string;
-} | {
-    completed: {
-        billOfSale: string;
+    return {
+        id: value.id,
+        tradeProposalStatus: record_opt_to_undefined(from_candid_opt_n16(_uploadFile, _downloadFile, value.tradeProposalStatus)),
+        content: value.content,
+        sender: value.sender,
+        timestamp: value.timestamp,
+        tradeProposalSiteId: record_opt_to_undefined(from_candid_opt_n18(_uploadFile, _downloadFile, value.tradeProposalSiteId)),
+        receiver: value.receiver,
+        tradeProposalSiteTitle: record_opt_to_undefined(from_candid_opt_n18(_uploadFile, _downloadFile, value.tradeProposalSiteTitle))
     };
+}
+function from_candid_record_n21(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    userPrincipal: [] | [string];
+    response: string;
 }): {
-    __kind__: "cancelled";
-    cancelled: string;
-} | {
-    __kind__: "pending";
-    pending: string;
-} | {
-    __kind__: "completed";
-    completed: {
-        billOfSale: string;
-    };
+    userPrincipal?: string;
+    response: string;
 } {
-    return "cancelled" in value ? {
-        __kind__: "cancelled",
-        cancelled: value.cancelled
-    } : "pending" in value ? {
-        __kind__: "pending",
-        pending: value.pending
-    } : "completed" in value ? {
-        __kind__: "completed",
-        completed: value.completed
-    } : value;
+    return {
+        userPrincipal: record_opt_to_undefined(from_candid_opt_n18(_uploadFile, _downloadFile, value.userPrincipal)),
+        response: value.response
+    };
 }
-function from_candid_variant_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    admin: null;
-} | {
-    user: null;
-} | {
-    guest: null;
-}): UserRole {
-    return "admin" in value ? UserRole.admin : "user" in value ? UserRole.user : "guest" in value ? UserRole.guest : value;
+function from_candid_record_n23(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    id: string;
+    status: {
+        cancelled: string;
+    } | {
+        pending: string;
+    } | {
+        completed: {
+            billOfSale: string;
+        };
+    };
+    createdAt: bigint;
+    seller: Principal;
+    stripePaymentIntentId: string;
+    buyer: Principal;
+    siteId: string;
+    price: bigint;
+}): {
+    id: string;
+    status: {
+        __kind__: "cancelled";
+        cancelled: string;
+    } | {
+        __kind__: "pending";
+        pending: string;
+    } | {
+        __kind__: "completed";
+        completed: {
+            billOfSale: string;
+        };
+    };
+    createdAt: bigint;
+    seller: Principal;
+    stripePaymentIntentId: string;
+    buyer: Principal;
+    siteId: string;
+    price: bigint;
+} {
+    return {
+        id: value.id,
+        status: from_candid_variant_n24(_uploadFile, _downloadFile, value.status),
+        createdAt: value.createdAt,
+        seller: value.seller,
+        stripePaymentIntentId: value.stripePaymentIntentId,
+        buyer: value.buyer,
+        siteId: value.siteId,
+        price: value.price
+    };
 }
-function from_candid_variant_n9(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_record_n26(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    listings: Array<_Site>;
+    sites: Array<_Site>;
+    transactions: Array<_Transaction>;
+}): {
+    listings: Array<Site>;
+    sites: Array<Site>;
+    transactions: Array<Transaction>;
+} {
+    return {
+        listings: from_candid_vec_n9(_uploadFile, _downloadFile, value.listings),
+        sites: from_candid_vec_n9(_uploadFile, _downloadFile, value.sites),
+        transactions: from_candid_vec_n27(_uploadFile, _downloadFile, value.transactions)
+    };
+}
+function from_candid_record_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    principal: Principal;
+    profile: [] | [_UserProfile];
+}): {
+    principal: Principal;
+    profile?: UserProfile;
+} {
+    return {
+        principal: value.principal,
+        profile: record_opt_to_undefined(from_candid_opt_n6(_uploadFile, _downloadFile, value.profile))
+    };
+}
+function from_candid_variant_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     published: string;
 } | {
     sold: {
@@ -951,11 +1073,95 @@ function from_candid_variant_n9(_uploadFile: (file: ExternalBlob) => Promise<Uin
         listed: value.listed
     } : value;
 }
-function from_candid_vec_n19(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_Transaction>): Array<Transaction> {
-    return value.map((x)=>from_candid_Transaction_n14(_uploadFile, _downloadFile, x));
+function from_candid_variant_n17(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    pending: null;
+} | {
+    accepted: null;
+} | {
+    declined: null;
+}): Variant_pending_accepted_declined {
+    return "pending" in value ? Variant_pending_accepted_declined.pending : "accepted" in value ? Variant_pending_accepted_declined.accepted : "declined" in value ? Variant_pending_accepted_declined.declined : value;
 }
-function from_candid_vec_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_Site>): Array<Site> {
-    return value.map((x)=>from_candid_Site_n7(_uploadFile, _downloadFile, x));
+function from_candid_variant_n20(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    completed: {
+        userPrincipal: [] | [string];
+        response: string;
+    };
+} | {
+    failed: {
+        error: string;
+    };
+}): {
+    __kind__: "completed";
+    completed: {
+        userPrincipal?: string;
+        response: string;
+    };
+} | {
+    __kind__: "failed";
+    failed: {
+        error: string;
+    };
+} {
+    return "completed" in value ? {
+        __kind__: "completed",
+        completed: from_candid_record_n21(_uploadFile, _downloadFile, value.completed)
+    } : "failed" in value ? {
+        __kind__: "failed",
+        failed: value.failed
+    } : value;
+}
+function from_candid_variant_n24(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    cancelled: string;
+} | {
+    pending: string;
+} | {
+    completed: {
+        billOfSale: string;
+    };
+}): {
+    __kind__: "cancelled";
+    cancelled: string;
+} | {
+    __kind__: "pending";
+    pending: string;
+} | {
+    __kind__: "completed";
+    completed: {
+        billOfSale: string;
+    };
+} {
+    return "cancelled" in value ? {
+        __kind__: "cancelled",
+        cancelled: value.cancelled
+    } : "pending" in value ? {
+        __kind__: "pending",
+        pending: value.pending
+    } : "completed" in value ? {
+        __kind__: "completed",
+        completed: value.completed
+    } : value;
+}
+function from_candid_variant_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    admin: null;
+} | {
+    user: null;
+} | {
+    guest: null;
+}): UserRole {
+    return "admin" in value ? UserRole.admin : "user" in value ? UserRole.user : "guest" in value ? UserRole.guest : value;
+}
+function from_candid_vec_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_ChatMessage>): Array<ChatMessage> {
+    return value.map((x)=>from_candid_ChatMessage_n14(_uploadFile, _downloadFile, x));
+}
+function from_candid_vec_n27(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_Transaction>): Array<Transaction> {
+    return value.map((x)=>from_candid_Transaction_n22(_uploadFile, _downloadFile, x));
+}
+function from_candid_vec_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_UserDirectoryEntry>): Array<UserDirectoryEntry> {
+    return value.map((x)=>from_candid_UserDirectoryEntry_n4(_uploadFile, _downloadFile, x));
+}
+function from_candid_vec_n9(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_Site>): Array<Site> {
+    return value.map((x)=>from_candid_Site_n10(_uploadFile, _downloadFile, x));
 }
 function to_candid_UserRole_n1(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): _UserRole {
     return to_candid_variant_n2(_uploadFile, _downloadFile, value);

@@ -17,6 +17,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import {
   CheckCircle,
   Clock,
+  Copy,
   Edit,
   ExternalLink,
   Globe,
@@ -24,6 +25,7 @@ import {
   Layers,
   LayoutDashboard,
   Loader2,
+  MessageCircle,
   Plus,
   Receipt,
   Settings,
@@ -33,7 +35,7 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { Site, Transaction } from "../backend";
 import { Layout } from "../components/Layout";
@@ -43,15 +45,18 @@ import { ProtectedRoute } from "../components/ProtectedRoute";
 import { TransactionDetailModal } from "../components/TransactionDetailModal";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
+  useCreateProfile,
   useGetCallerUserProfile,
   useGetUserDashboard,
   usePublishSite,
   useUnlistSite,
+  useUnreadMessageCount,
   useUpdateBio,
   useUpdateDisplayName,
   useUpdateUsername,
 } from "../hooks/useQueries";
 import AdminPanelInline from "./AdminPanelInline";
+import ChatTab from "./ChatTab";
 
 function getSiteStatusBadge(site: Site) {
   switch (site.status.__kind__) {
@@ -119,7 +124,11 @@ function DashboardContent() {
   const updateDisplayName = useUpdateDisplayName();
   const updateUsername = useUpdateUsername();
   const updateBio = useUpdateBio();
+  const createProfile = useCreateProfile();
   const navigate = useNavigate();
+
+  const myPrincipal = identity?.getPrincipal().toString() ?? "";
+  const { data: unreadCount = 0 } = useUnreadMessageCount(myPrincipal);
 
   const [listModal, setListModal] = useState<{
     siteId: string;
@@ -134,8 +143,32 @@ function DashboardContent() {
   const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   const isAuthenticated = !!identity;
+  const autoCreateAttempted = useRef(false);
   const showProfileSetup =
     isAuthenticated && !profileLoading && isFetched && userProfile === null;
+
+  // Auto-create profile silently on first login
+  useEffect(() => {
+    if (
+      isFetched &&
+      userProfile === null &&
+      identity &&
+      !autoCreateAttempted.current
+    ) {
+      autoCreateAttempted.current = true;
+      const principal = identity.getPrincipal().toString();
+      const safeSlug = principal.slice(0, 8).replace(/-/g, "");
+      createProfile
+        .mutateAsync({
+          username: `user_${safeSlug}`,
+          displayName: `User ${principal.slice(0, 6)}`,
+          bio: "",
+        })
+        .catch(() => {
+          // Silently ignore — profile may already exist or creation failed
+        });
+    }
+  }, [isFetched, userProfile, identity, createProfile]);
 
   // Populate settings form from profile
   if (userProfile && !settingsLoaded) {
@@ -247,6 +280,18 @@ function DashboardContent() {
               data-ocid="dashboard.admin.tab"
             >
               <Shield className="w-4 h-4 mr-2" /> Admin Panel
+            </TabsTrigger>
+            <TabsTrigger
+              value="chat"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground relative"
+              data-ocid="dashboard.chat.tab"
+            >
+              <MessageCircle className="w-4 h-4 mr-2" /> Chat
+              {unreadCount > 0 && (
+                <span className="ml-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 leading-none">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
             </TabsTrigger>
           </TabsList>
 
@@ -468,7 +513,6 @@ function DashboardContent() {
                   </TableHeader>
                   <TableBody>
                     {dashboard.transactions.map((tx, i) => {
-                      const myPrincipal = identity?.getPrincipal().toString();
                       const role =
                         tx.buyer.toString() === myPrincipal
                           ? "Buyer"
@@ -610,12 +654,53 @@ function DashboardContent() {
                   </Button>
                 </form>
               </div>
+
+              {/* Principal ID Section */}
+              <div className="card-glow bg-card rounded-xl border border-border p-6 mt-4">
+                <h2 className="font-display font-bold text-xl text-foreground mb-1 flex items-center gap-2">
+                  <KeyRound className="w-5 h-5 text-primary" />
+                  Your Principal ID
+                </h2>
+                <p className="text-muted-foreground text-sm mb-4">
+                  This is your unique identity on the Internet Computer
+                  blockchain.
+                </p>
+                <div className="flex items-center gap-2">
+                  <div
+                    className="flex-1 font-mono text-xs bg-input border border-border rounded-lg px-3 py-2.5 text-foreground/80 break-all"
+                    data-ocid="settings.principal.panel"
+                  >
+                    {identity?.getPrincipal().toString() ?? "Not authenticated"}
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="border-border shrink-0"
+                    onClick={() => {
+                      const pid = identity?.getPrincipal().toString();
+                      if (pid) {
+                        navigator.clipboard.writeText(pid);
+                        toast.success("Principal ID copied!");
+                      }
+                    }}
+                    data-ocid="settings.principal.button"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
             </div>
           </TabsContent>
 
           {/* Admin Panel Tab */}
           <TabsContent value="admin">
             <AdminPanelInline />
+          </TabsContent>
+
+          {/* Chat Tab */}
+          <TabsContent value="chat">
+            <ChatTab />
           </TabsContent>
         </Tabs>
       </div>

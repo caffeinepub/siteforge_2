@@ -26,6 +26,14 @@ export const UserProfile = IDL.Record({
   'displayName' : IDL.Text,
   'joinedAt' : IDL.Int,
 });
+export const UserDirectoryEntry = IDL.Record({
+  'principal' : IDL.Principal,
+  'profile' : IDL.Opt(UserProfile),
+});
+export const LoginEvent = IDL.Record({
+  'principal' : IDL.Principal,
+  'loginAt' : IDL.Int,
+});
 export const Listing = IDL.Record({
   'listedAt' : IDL.Int,
   'price' : IDL.Nat,
@@ -49,6 +57,22 @@ export const Site = IDL.Record({
   'createdAt' : IDL.Int,
   'description' : IDL.Text,
   'updatedAt' : IDL.Int,
+});
+export const ChatMessage = IDL.Record({
+  'id' : IDL.Text,
+  'tradeProposalStatus' : IDL.Opt(
+    IDL.Variant({
+      'pending' : IDL.Null,
+      'accepted' : IDL.Null,
+      'declined' : IDL.Null,
+    })
+  ),
+  'content' : IDL.Text,
+  'sender' : IDL.Principal,
+  'timestamp' : IDL.Int,
+  'tradeProposalSiteId' : IDL.Opt(IDL.Text),
+  'receiver' : IDL.Principal,
+  'tradeProposalSiteTitle' : IDL.Opt(IDL.Text),
 });
 export const StripeSessionStatus = IDL.Variant({
   'completed' : IDL.Record({
@@ -111,10 +135,13 @@ export const idlService = IDL.Service({
   'createProfile' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [], []),
   'createSite' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [IDL.Text], []),
   'finalizeTransaction' : IDL.Func([IDL.Text, IDL.Text], [], []),
+  'getAllUsers' : IDL.Func([], [IDL.Vec(UserDirectoryEntry)], ['query']),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+  'getLoginEvents' : IDL.Func([], [IDL.Vec(LoginEvent)], ['query']),
   'getMarketplaceListingIds' : IDL.Func([], [IDL.Vec(IDL.Text)], ['query']),
   'getMarketplaceListings' : IDL.Func([], [IDL.Vec(Site)], ['query']),
+  'getMessages' : IDL.Func([IDL.Principal], [IDL.Vec(ChatMessage)], []),
   'getProfile' : IDL.Func([IDL.Principal], [UserProfile], ['query']),
   'getSiteById' : IDL.Func([IDL.Text], [Site], ['query']),
   'getSiteByTitle' : IDL.Func([IDL.Text], [Site], ['query']),
@@ -131,8 +158,12 @@ export const idlService = IDL.Service({
   'isSiteListed' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
   'isStripeConfigured' : IDL.Func([], [IDL.Bool], ['query']),
   'listSite' : IDL.Func([IDL.Text, IDL.Nat, IDL.Text], [], []),
+  'proposeTrade' : IDL.Func([IDL.Principal, IDL.Text], [IDL.Text], []),
   'publishSite' : IDL.Func([IDL.Text], [IDL.Text], []),
+  'recordLogin' : IDL.Func([], [], []),
+  'respondToTradeProposal' : IDL.Func([IDL.Text, IDL.Bool], [], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+  'sendMessage' : IDL.Func([IDL.Principal, IDL.Text], [IDL.Text], []),
   'setStripeConfiguration' : IDL.Func([StripeConfiguration], [], []),
   'transform' : IDL.Func(
       [TransformationInput],
@@ -167,6 +198,14 @@ export const idlFactory = ({ IDL }) => {
     'displayName' : IDL.Text,
     'joinedAt' : IDL.Int,
   });
+  const UserDirectoryEntry = IDL.Record({
+    'principal' : IDL.Principal,
+    'profile' : IDL.Opt(UserProfile),
+  });
+  const LoginEvent = IDL.Record({
+    'principal' : IDL.Principal,
+    'loginAt' : IDL.Int,
+  });
   const Listing = IDL.Record({
     'listedAt' : IDL.Int,
     'price' : IDL.Nat,
@@ -190,6 +229,22 @@ export const idlFactory = ({ IDL }) => {
     'createdAt' : IDL.Int,
     'description' : IDL.Text,
     'updatedAt' : IDL.Int,
+  });
+  const ChatMessage = IDL.Record({
+    'id' : IDL.Text,
+    'tradeProposalStatus' : IDL.Opt(
+      IDL.Variant({
+        'pending' : IDL.Null,
+        'accepted' : IDL.Null,
+        'declined' : IDL.Null,
+      })
+    ),
+    'content' : IDL.Text,
+    'sender' : IDL.Principal,
+    'timestamp' : IDL.Int,
+    'tradeProposalSiteId' : IDL.Opt(IDL.Text),
+    'receiver' : IDL.Principal,
+    'tradeProposalSiteTitle' : IDL.Opt(IDL.Text),
   });
   const StripeSessionStatus = IDL.Variant({
     'completed' : IDL.Record({
@@ -249,10 +304,13 @@ export const idlFactory = ({ IDL }) => {
     'createProfile' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [], []),
     'createSite' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [IDL.Text], []),
     'finalizeTransaction' : IDL.Func([IDL.Text, IDL.Text], [], []),
+    'getAllUsers' : IDL.Func([], [IDL.Vec(UserDirectoryEntry)], ['query']),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+    'getLoginEvents' : IDL.Func([], [IDL.Vec(LoginEvent)], ['query']),
     'getMarketplaceListingIds' : IDL.Func([], [IDL.Vec(IDL.Text)], ['query']),
     'getMarketplaceListings' : IDL.Func([], [IDL.Vec(Site)], ['query']),
+    'getMessages' : IDL.Func([IDL.Principal], [IDL.Vec(ChatMessage)], []),
     'getProfile' : IDL.Func([IDL.Principal], [UserProfile], ['query']),
     'getSiteById' : IDL.Func([IDL.Text], [Site], ['query']),
     'getSiteByTitle' : IDL.Func([IDL.Text], [Site], ['query']),
@@ -269,8 +327,12 @@ export const idlFactory = ({ IDL }) => {
     'isSiteListed' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
     'isStripeConfigured' : IDL.Func([], [IDL.Bool], ['query']),
     'listSite' : IDL.Func([IDL.Text, IDL.Nat, IDL.Text], [], []),
+    'proposeTrade' : IDL.Func([IDL.Principal, IDL.Text], [IDL.Text], []),
     'publishSite' : IDL.Func([IDL.Text], [IDL.Text], []),
+    'recordLogin' : IDL.Func([], [], []),
+    'respondToTradeProposal' : IDL.Func([IDL.Text, IDL.Bool], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+    'sendMessage' : IDL.Func([IDL.Principal, IDL.Text], [IDL.Text], []),
     'setStripeConfiguration' : IDL.Func([StripeConfiguration], [], []),
     'transform' : IDL.Func(
         [TransformationInput],

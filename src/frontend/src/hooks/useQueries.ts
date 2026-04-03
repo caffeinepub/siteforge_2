@@ -15,6 +15,23 @@ export interface LoginEvent {
   loginAt: bigint;
 }
 
+// ============ Read-tracking helpers for Chat ============
+function getLastReadTimestamp(
+  myPrincipal: string,
+  partnerPrincipal: string,
+): number {
+  const key = `chat_read_${myPrincipal}_${partnerPrincipal}`;
+  return Number(localStorage.getItem(key) ?? "0");
+}
+
+export function markConversationAsRead(
+  myPrincipal: string,
+  partnerPrincipal: string,
+): void {
+  const key = `chat_read_${myPrincipal}_${partnerPrincipal}`;
+  localStorage.setItem(key, Date.now().toString());
+}
+
 // ============ User Profile ============
 export function useGetCallerUserProfile() {
   const { actor, isFetching: actorFetching } = useActor();
@@ -413,6 +430,131 @@ export function useRecordLogin() {
     mutationFn: async () => {
       if (!actor) throw new Error("Actor not available");
       return (actor as any).recordLogin() as Promise<void>;
+    },
+  });
+}
+
+// ============ Chat ============
+export function useGetAllUsers() {
+  const { actor, isFetching } = useActor();
+  return useQuery<import("../backend").UserDirectoryEntry[]>({
+    queryKey: ["allUsers"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getAllUsers();
+    },
+    enabled: !!actor && !isFetching,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useGetMessages(partnerPrincipal: string | null) {
+  const { actor, isFetching } = useActor();
+  return useQuery<import("../backend").ChatMessage[]>({
+    queryKey: ["messages", partnerPrincipal],
+    queryFn: async () => {
+      if (!actor || !partnerPrincipal) return [];
+      const { Principal } = await import("@icp-sdk/core/principal");
+      return actor.getMessages(Principal.fromText(partnerPrincipal));
+    },
+    enabled: !!actor && !isFetching && !!partnerPrincipal,
+    refetchInterval: 5_000,
+  });
+}
+
+export function useSendMessage() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ to, content }: { to: Principal; content: string }) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.sendMessage(to, content);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["messages"] });
+    },
+  });
+}
+
+export function useProposeTradeMessage() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ to, siteId }: { to: Principal; siteId: string }) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.proposeTrade(to, siteId);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["messages"] });
+    },
+  });
+}
+
+export function useRespondToTradeProposal() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      messageId,
+      accept,
+    }: { messageId: string; accept: boolean }) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.respondToTradeProposal(messageId, accept);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["messages"] });
+    },
+  });
+}
+
+export function useUnreadMessageCount(myPrincipal: string) {
+  const { actor, isFetching } = useActor();
+  return useQuery<number>({
+    queryKey: ["unreadCount", myPrincipal],
+    queryFn: async () => {
+      if (!actor || !myPrincipal) return 0;
+      const { Principal } = await import("@icp-sdk/core/principal");
+      const allUsers = await actor.getAllUsers();
+      const others = allUsers.filter(
+        (u) => u.principal.toString() !== myPrincipal,
+      );
+      let total = 0;
+      await Promise.all(
+        others.map(async (u) => {
+          const partnerStr = u.principal.toString();
+          try {
+            const msgs = await actor.getMessages(
+              Principal.fromText(partnerStr),
+            );
+            const lastRead = getLastReadTimestamp(myPrincipal, partnerStr);
+            for (const msg of msgs) {
+              const msgMs = Number(msg.timestamp) / 1_000_000;
+              if (msg.sender.toString() !== myPrincipal && msgMs > lastRead) {
+                total++;
+              }
+            }
+          } catch {
+            // silently ignore per-conversation errors
+          }
+        }),
+      );
+      return total;
+    },
+    enabled: !!actor && !isFetching && !!myPrincipal,
+    refetchInterval: 10_000,
+  });
+}
+
+export function useInitializeAdmin() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (secret: string) => {
+      if (!actor) throw new Error("Actor not available");
+      return (actor as any)._initializeAccessControlWithSecret(secret);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["isCallerAdmin"] });
     },
   });
 }

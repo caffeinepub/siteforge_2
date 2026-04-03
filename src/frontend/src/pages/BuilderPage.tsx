@@ -28,6 +28,7 @@ import {
   Plus,
   Redo2,
   Save,
+  Search,
   Send,
   Smartphone,
   Star,
@@ -280,6 +281,116 @@ const TEMPLATES: {
 ];
 
 // ============================================================
+// EXTENDED TEMPLATE LIBRARY WITH SEARCH METADATA
+// ============================================================
+
+const SEARCH_TEMPLATES: {
+  id: string;
+  name: string;
+  description: string;
+  tags: string[];
+  thumbnail: string | null;
+  blocks: Block["type"][];
+}[] = [
+  {
+    id: "saas",
+    name: "SaaS Landing",
+    description: "Software product or startup landing page",
+    tags: ["saas", "startup", "software", "app"],
+    thumbnail: "/assets/generated/site-thumb-saas.dim_600x400.jpg",
+    blocks: ["navbar", "hero", "features", "pricing", "testimonials", "footer"],
+  },
+  {
+    id: "portfolio",
+    name: "Portfolio",
+    description: "Showcase creative work and personal projects",
+    tags: ["portfolio", "designer", "artist", "photography", "creative"],
+    thumbnail: "/assets/generated/site-thumb-portfolio.dim_600x400.jpg",
+    blocks: ["navbar", "hero", "gallery", "testimonials", "footer"],
+  },
+  {
+    id: "agency",
+    name: "Agency",
+    description: "Full-service agency or consulting firm",
+    tags: ["agency", "company", "business", "consulting"],
+    thumbnail: null,
+    blocks: [
+      "navbar",
+      "hero",
+      "stats",
+      "features",
+      "team",
+      "contact",
+      "footer",
+    ],
+  },
+  {
+    id: "blog",
+    name: "Blog / Personal",
+    description: "Personal blog or thought leadership site",
+    tags: ["blog", "personal", "writing", "journal"],
+    thumbnail: "/assets/generated/site-thumb-blog.dim_600x400.jpg",
+    blocks: ["navbar", "hero", "features", "footer"],
+  },
+  {
+    id: "ecommerce",
+    name: "E-Commerce Store",
+    description: "Online shop or product showcase",
+    tags: ["ecommerce", "shop", "store", "products", "retail"],
+    thumbnail: "/assets/generated/site-thumb-ecommerce.dim_600x400.jpg",
+    blocks: ["navbar", "hero", "gallery", "pricing", "footer"],
+  },
+  {
+    id: "restaurant",
+    name: "Restaurant / Cafe",
+    description: "Food business menu and reservation page",
+    tags: ["restaurant", "cafe", "food", "menu", "dining"],
+    thumbnail: "/assets/generated/site-thumb-restaurant.dim_600x400.jpg",
+    blocks: ["navbar", "hero", "gallery", "features", "contact", "footer"],
+  },
+  {
+    id: "startup",
+    name: "Startup",
+    description: "Modern startup or product launch page",
+    tags: ["startup", "launch", "product", "growth"],
+    thumbnail: "/assets/generated/site-thumb-startup.dim_600x400.jpg",
+    blocks: ["navbar", "hero", "stats", "features", "pricing", "footer"],
+  },
+  {
+    id: "personal-brand",
+    name: "Personal Brand",
+    description: "Speaker, coach, or influencer page",
+    tags: ["personal", "brand", "speaker", "coach", "influencer"],
+    thumbnail: null,
+    blocks: ["navbar", "hero", "testimonials", "contact", "footer"],
+  },
+  {
+    id: "nonprofit",
+    name: "Nonprofit / NGO",
+    description: "Charity, cause, or community organization",
+    tags: ["nonprofit", "charity", "ngo", "community", "cause"],
+    thumbnail: null,
+    blocks: [
+      "navbar",
+      "hero",
+      "stats",
+      "features",
+      "team",
+      "contact",
+      "footer",
+    ],
+  },
+  {
+    id: "event",
+    name: "Event / Conference",
+    description: "Event landing page with schedule and tickets",
+    tags: ["event", "conference", "meetup", "ticket", "schedule"],
+    thumbnail: null,
+    blocks: ["navbar", "hero", "features", "pricing", "team", "footer"],
+  },
+];
+
+// ============================================================
 // BLOCK FACTORY
 // ============================================================
 
@@ -492,6 +603,7 @@ function BlockPreview({
 
   if (block.type === "navbar") {
     return (
+      // biome-ignore lint/a11y/useKeyWithClickEvents: pre-existing pattern in canvas block rendering
       <div
         className={base}
         onClick={onClick}
@@ -514,6 +626,7 @@ function BlockPreview({
           <div style={{ display: "flex", gap: 16 }}>
             {block.links.map((link, i) => (
               <span
+                // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in canvas block rendering
                 key={i}
                 style={{ color: t.text, fontSize: 13, opacity: 0.8 }}
               >
@@ -528,6 +641,7 @@ function BlockPreview({
 
   if (block.type === "hero") {
     return (
+      // biome-ignore lint/a11y/useKeyWithClickEvents: pre-existing pattern in canvas block rendering
       <div
         className={base}
         onClick={onClick}
@@ -579,6 +693,7 @@ function BlockPreview({
 
   if (block.type === "features") {
     return (
+      // biome-ignore lint/a11y/useKeyWithClickEvents: pre-existing pattern in canvas block rendering
       <div
         className={base}
         onClick={onClick}
@@ -607,6 +722,7 @@ function BlockPreview({
         >
           {block.items.map((item, i) => (
             <div
+              // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in canvas block rendering
               key={i}
               style={{
                 textAlign: "center",
@@ -638,6 +754,7 @@ function BlockPreview({
 
   if (block.type === "pricing") {
     return (
+      // biome-ignore lint/a11y/useKeyWithClickEvents: pre-existing pattern in canvas block rendering
       <div
         className={base}
         onClick={onClick}
@@ -666,6 +783,7 @@ function BlockPreview({
         >
           {block.tiers.map((tier, i) => (
             <div
+              // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in canvas block rendering
               key={i}
               style={{
                 border: `1px solid ${t.border}`,
@@ -680,6 +798,7 @@ function BlockPreview({
               <ul style={{ marginTop: 8, listStyle: "none", padding: 0 }}>
                 {tier.features.map((f, fi) => (
                   <li
+                    // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in canvas block rendering
                     key={fi}
                     style={{
                       fontSize: 11,
@@ -701,6 +820,7 @@ function BlockPreview({
 
   if (block.type === "testimonials") {
     return (
+      // biome-ignore lint/a11y/useKeyWithClickEvents: pre-existing pattern in canvas block rendering
       <div
         className={base}
         onClick={onClick}
@@ -725,6 +845,7 @@ function BlockPreview({
         >
           {block.items.map((item, i) => (
             <div
+              // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in canvas block rendering
               key={i}
               style={{
                 border: `1px solid ${t.border}`,
@@ -758,6 +879,7 @@ function BlockPreview({
 
   if (block.type === "footer") {
     return (
+      // biome-ignore lint/a11y/useKeyWithClickEvents: pre-existing pattern in canvas block rendering
       <div
         className={base}
         onClick={onClick}
@@ -780,6 +902,7 @@ function BlockPreview({
           <div style={{ display: "flex", gap: 16 }}>
             {block.links.map((link, i) => (
               <span
+                // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in canvas block rendering
                 key={i}
                 style={{ color: t.text, fontSize: 11, opacity: 0.6 }}
               >
@@ -794,6 +917,7 @@ function BlockPreview({
 
   if (block.type === "gallery") {
     return (
+      // biome-ignore lint/a11y/useKeyWithClickEvents: pre-existing pattern in canvas block rendering
       <div
         className={base}
         onClick={onClick}
@@ -822,6 +946,7 @@ function BlockPreview({
         >
           {block.items.map((item, i) => (
             <div
+              // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in canvas block rendering
               key={i}
               style={{
                 borderRadius: 8,
@@ -850,6 +975,7 @@ function BlockPreview({
 
   if (block.type === "contact") {
     return (
+      // biome-ignore lint/a11y/useKeyWithClickEvents: pre-existing pattern in canvas block rendering
       <div
         className={base}
         onClick={onClick}
@@ -965,6 +1091,7 @@ function BlockPreview({
 
   if (block.type === "cta") {
     return (
+      // biome-ignore lint/a11y/useKeyWithClickEvents: pre-existing pattern in canvas block rendering
       <div
         className={base}
         onClick={onClick}
@@ -1015,6 +1142,7 @@ function BlockPreview({
 
   if (block.type === "faq") {
     return (
+      // biome-ignore lint/a11y/useKeyWithClickEvents: pre-existing pattern in canvas block rendering
       <div
         className={base}
         onClick={onClick}
@@ -1037,6 +1165,7 @@ function BlockPreview({
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {block.items.map((item, i) => (
             <div
+              // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in block renderer
               key={i}
               style={{
                 border: `1px solid ${t.border}`,
@@ -1066,6 +1195,7 @@ function BlockPreview({
 
   if (block.type === "team") {
     return (
+      // biome-ignore lint/a11y/useKeyWithClickEvents: pre-existing pattern in canvas block rendering
       <div
         className={base}
         onClick={onClick}
@@ -1093,6 +1223,7 @@ function BlockPreview({
           }}
         >
           {block.members.map((member, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in block renderer
             <div key={i} style={{ textAlign: "center", padding: 12 }}>
               <div
                 style={{
@@ -1126,6 +1257,7 @@ function BlockPreview({
 
   if (block.type === "stats") {
     return (
+      // biome-ignore lint/a11y/useKeyWithClickEvents: pre-existing pattern in canvas block rendering
       <div
         className={base}
         onClick={onClick}
@@ -1153,6 +1285,7 @@ function BlockPreview({
           }}
         >
           {block.items.map((item, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in block renderer
             <div key={i} style={{ textAlign: "center" }}>
               <div style={{ fontSize: 28, fontWeight: 800, color: t.accent }}>
                 {item.value}
@@ -1215,6 +1348,7 @@ function PropertiesPanel({
           />
         </div>
         {block.links.map((link, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in block renderer
           <div key={i} className="flex gap-2">
             <Input
               value={link.label}
@@ -1310,6 +1444,7 @@ function PropertiesPanel({
         </div>
         {block.items.map((item, i) => (
           <div
+            // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in block renderer
             key={i}
             className="border border-border rounded-lg p-3 space-y-2"
           >
@@ -1368,6 +1503,7 @@ function PropertiesPanel({
         </div>
         {block.tiers.map((tier, i) => (
           <div
+            // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in block renderer
             key={i}
             className="border border-border rounded-lg p-3 space-y-2"
           >
@@ -1416,6 +1552,7 @@ function PropertiesPanel({
         </div>
         {block.items.map((item, i) => (
           <div
+            // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in block renderer
             key={i}
             className="border border-border rounded-lg p-3 space-y-2"
           >
@@ -1474,6 +1611,7 @@ function PropertiesPanel({
           />
         </div>
         {block.links.map((link, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in block renderer
           <div key={i} className="flex gap-2">
             <Input
               value={link.label}
@@ -1516,6 +1654,7 @@ function PropertiesPanel({
           />
         </div>
         {block.items.map((item, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in block renderer
           <div key={i} className="flex gap-2 items-center">
             <span className="text-xs text-muted-foreground w-6">{i + 1}.</span>
             <Input
@@ -1654,6 +1793,7 @@ function PropertiesPanel({
         </div>
         {block.items.map((item, i) => (
           <div
+            // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in block renderer
             key={i}
             className="border border-border rounded-lg p-3 space-y-2"
           >
@@ -1703,6 +1843,7 @@ function PropertiesPanel({
         </div>
         {block.members.map((member, i) => (
           <div
+            // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in block renderer
             key={i}
             className="border border-border rounded-lg p-3 space-y-2"
           >
@@ -1760,6 +1901,7 @@ function PropertiesPanel({
           />
         </div>
         {block.items.map((item, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in block renderer
           <div key={i} className="flex gap-2 items-center">
             <Input
               value={item.value}
@@ -1810,7 +1952,7 @@ function getAiResponse(
     p.includes("artist") ||
     p.includes("photography")
   ) {
-    const template = TEMPLATES.find((t) => t.name === "Portfolio");
+    const template = SEARCH_TEMPLATES.find((t) => t.id === "portfolio");
     if (template) {
       onSetBlocks(template.blocks.map(createBlock));
       return "I've set up a Portfolio site for you — perfect for showcasing your creative work! Customize each section in the Properties panel on the right. ✨";
@@ -1824,7 +1966,7 @@ function getAiResponse(
     p.includes("app") ||
     p.includes("product")
   ) {
-    const template = TEMPLATES.find((t) => t.name === "SaaS Landing");
+    const template = SEARCH_TEMPLATES.find((t) => t.id === "saas");
     if (template) {
       onSetBlocks(template.blocks.map(createBlock));
       return "Done! I've built a SaaS Landing page structure for you — navbar, hero, features, pricing, testimonials, and footer. Start customizing in the Properties panel! 🚀";
@@ -1835,13 +1977,157 @@ function getAiResponse(
     p.includes("agency") ||
     p.includes("company") ||
     p.includes("business") ||
-    p.includes("team")
+    p.includes("consulting")
   ) {
-    const template = TEMPLATES.find((t) => t.name === "Agency");
+    const template = SEARCH_TEMPLATES.find((t) => t.id === "agency");
     if (template) {
       onSetBlocks(template.blocks.map(createBlock));
       return "Great choice! I've created an Agency site with stats, team showcase, and contact section. Your business site is ready to customize. 💼";
     }
+  }
+
+  if (
+    p.includes("blog") ||
+    p.includes("journal") ||
+    p.includes("writing") ||
+    p.includes("personal site")
+  ) {
+    const template = SEARCH_TEMPLATES.find((t) => t.id === "blog");
+    if (template) {
+      onSetBlocks(template.blocks.map(createBlock));
+      return "Blog site ready! I've set up a clean layout perfect for your articles and personal writing. Start customizing in the Properties panel. ✍️";
+    }
+  }
+
+  if (
+    p.includes("ecommerce") ||
+    p.includes("e-commerce") ||
+    p.includes("shop") ||
+    p.includes("store") ||
+    p.includes("sell") ||
+    p.includes("products") ||
+    p.includes("retail")
+  ) {
+    const template = SEARCH_TEMPLATES.find((t) => t.id === "ecommerce");
+    if (template) {
+      onSetBlocks(template.blocks.map(createBlock));
+      return "E-commerce store built! Gallery, pricing, and all the essentials are in place. Customize your products in the Properties panel. 🛒";
+    }
+  }
+
+  if (
+    p.includes("restaurant") ||
+    p.includes("cafe") ||
+    p.includes("food") ||
+    p.includes("menu") ||
+    p.includes("dining")
+  ) {
+    const template = SEARCH_TEMPLATES.find((t) => t.id === "restaurant");
+    if (template) {
+      onSetBlocks(template.blocks.map(createBlock));
+      return "Your restaurant site is ready! Complete with gallery, menu highlights, and a contact section for reservations. 🍽️";
+    }
+  }
+
+  if (
+    p.includes("event") ||
+    p.includes("conference") ||
+    p.includes("meetup") ||
+    p.includes("ticket") ||
+    p.includes("schedule")
+  ) {
+    const template = SEARCH_TEMPLATES.find((t) => t.id === "event");
+    if (template) {
+      onSetBlocks(template.blocks.map(createBlock));
+      return "Event page launched! Features, schedule, pricing, and speaker sections are all set up. 🎪";
+    }
+  }
+
+  if (
+    p.includes("personal brand") ||
+    p.includes("speaker") ||
+    p.includes("coach") ||
+    p.includes("influencer")
+  ) {
+    const template = SEARCH_TEMPLATES.find((t) => t.id === "personal-brand");
+    if (template) {
+      onSetBlocks(template.blocks.map(createBlock));
+      return "Personal brand page ready! Hero, testimonials, and contact — perfect for building your online presence. 🌟";
+    }
+  }
+
+  if (
+    p.includes("nonprofit") ||
+    p.includes("charity") ||
+    p.includes("ngo") ||
+    p.includes("community") ||
+    p.includes("cause")
+  ) {
+    const template = SEARCH_TEMPLATES.find((t) => t.id === "nonprofit");
+    if (template) {
+      onSetBlocks(template.blocks.map(createBlock));
+      return "Nonprofit site created! Stats, mission, team, and contact sections are ready. Make an impact! 💚";
+    }
+  }
+
+  if (
+    p.includes("launch") ||
+    p.includes("growth") ||
+    (p.includes("startup") && !p.includes("saas"))
+  ) {
+    const template = SEARCH_TEMPLATES.find((t) => t.id === "startup");
+    if (template) {
+      onSetBlocks(template.blocks.map(createBlock));
+      return "Startup landing page live! Stats, features, and pricing are all in place. Ready for launch! 🚀";
+    }
+  }
+
+  // Guided flow: vague or generic request
+  if (
+    (p.length < 15 ||
+      p.includes("website") ||
+      p.includes("site") ||
+      p.includes("build") ||
+      p.includes("create") ||
+      p.includes("make") ||
+      p.includes("help")) &&
+    !p.includes("add ") &&
+    !p.includes("remove") &&
+    !p.includes("change") &&
+    !p.includes("generate")
+  ) {
+    return "I'd love to help you build a site! What kind of website are you making? For example: a business, portfolio, blog, restaurant, or online store? 🤔";
+  }
+
+  // What can you do
+  if (
+    p.includes("what can you do") ||
+    p.includes("capabilities") ||
+    p === "help" ||
+    p.includes("how do you work")
+  ) {
+    return `Here's what I can do for you! 🤖
+
+🏗️ **Build complete sites:**
+• SaaS Landing, Portfolio, Agency, Blog
+• E-Commerce Store, Restaurant, Startup
+• Personal Brand, Nonprofit, Event
+
+➕ **Add specific sections:**
+• "Add a pricing section"
+• "Add a contact form"
+• "Add a gallery"
+• "Add a FAQ section"
+
+🎨 **Edit your content:**
+• "Change heading to My Title"
+• "Remove the footer"
+
+🧹 **Manage your canvas:**
+• "Clear the canvas"
+• "Start over"
+
+What would you like to build today?`;
   }
 
   // Add specific blocks
@@ -1952,7 +2238,8 @@ function getAiResponse(
     p.includes("build site") ||
     p.includes("full site")
   ) {
-    onSetBlocks(TEMPLATES[0].blocks.map(createBlock));
+    const saasTemplate = SEARCH_TEMPLATES.find((t) => t.id === "saas");
+    onSetBlocks((saasTemplate ?? SEARCH_TEMPLATES[0]).blocks.map(createBlock));
     return "Generated a complete SaaS landing page for you! It includes a navbar, hero, features, pricing, testimonials, and footer. Customize each section in the Properties panel. 🎉";
   }
 
@@ -1979,6 +2266,8 @@ What would you like to build? 🤖`;
 // AI CHAT PANEL
 // ============================================================
 
+type AiSubMode = "search" | "chat";
+
 function AiChatPanel({
   blocks,
   onSetBlocks,
@@ -1990,6 +2279,8 @@ function AiChatPanel({
   selectedBlock: Block | null;
   onUpdateBlock: (b: Block) => void;
 }) {
+  const [subMode, setSubMode] = useState<AiSubMode>("search");
+  const [searchQuery, setSearchQuery] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "ai",
@@ -2051,6 +2342,30 @@ function AiChatPanel({
     }
   };
 
+  const filteredTemplates = searchQuery.trim()
+    ? SEARCH_TEMPLATES.filter((t) => {
+        const q = searchQuery.toLowerCase();
+        return (
+          t.name.toLowerCase().includes(q) ||
+          t.description.toLowerCase().includes(q) ||
+          t.tags.some((tag) => tag.includes(q))
+        );
+      })
+    : SEARCH_TEMPLATES;
+
+  const handleUseTemplate = (template: (typeof SEARCH_TEMPLATES)[0]) => {
+    onSetBlocks(template.blocks.map(createBlock));
+    toast.success(`Applied "${template.name}" template!`);
+  };
+
+  const QUICK_CHIPS_ROW1 = [
+    "SaaS site",
+    "Portfolio",
+    "Restaurant",
+    "E-commerce",
+  ];
+  const QUICK_CHIPS_ROW2 = ["Blog", "Agency", "Event", "Personal Brand"];
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -2073,120 +2388,269 @@ function AiChatPanel({
         </div>
       </div>
 
-      {/* Quick actions */}
-      <div className="px-3 py-2 flex gap-1.5 flex-wrap border-b border-border/40">
-        {["SaaS site", "Portfolio", "Agency site"].map((q) => (
-          <button
-            key={q}
-            type="button"
-            onClick={() => sendMessage(`Generate a ${q}`)}
-            className="text-[10px] px-2 py-1 rounded-full border border-indigo-500/40 text-indigo-400 hover:bg-indigo-500/10 transition-colors"
-          >
-            {q}
-          </button>
-        ))}
-      </div>
-
-      {/* Chat history */}
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0"
-      >
-        {messages.map((msg, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-            className={`flex gap-2 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}
-          >
-            {msg.role === "ai" && (
-              <div
-                className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5"
-                style={{
-                  background: "linear-gradient(135deg, #6366f1, #a855f7)",
-                }}
-              >
-                <Bot className="w-3.5 h-3.5 text-white" />
-              </div>
-            )}
-            <div
-              className={`max-w-[85%] rounded-lg px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap ${
-                msg.role === "user"
-                  ? "bg-indigo-600 text-white rounded-tr-none"
-                  : "bg-muted text-foreground rounded-tl-none"
-              }`}
-            >
-              {msg.content}
-            </div>
-          </motion.div>
-        ))}
-
-        {isTyping && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex gap-2 items-center"
-          >
-            <div
-              className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center"
-              style={{
-                background: "linear-gradient(135deg, #6366f1, #a855f7)",
-              }}
-            >
-              <Bot className="w-3.5 h-3.5 text-white" />
-            </div>
-            <div className="bg-muted rounded-lg rounded-tl-none px-3 py-2.5 flex gap-1">
-              {[0, 1, 2].map((dot) => (
-                <motion.span
-                  key={dot}
-                  className="w-1.5 h-1.5 rounded-full bg-muted-foreground"
-                  animate={{ y: [0, -4, 0] }}
-                  transition={{
-                    duration: 0.6,
-                    repeat: Number.POSITIVE_INFINITY,
-                    delay: dot * 0.15,
-                  }}
-                />
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </div>
-
-      {/* Input area */}
-      <div className="border-t border-border/60 p-3 space-y-2">
+      {/* Sub-mode pill switcher */}
+      <div className="px-3 py-2 border-b border-border/40 flex gap-1">
         <button
           type="button"
-          onClick={() => sendMessage("Generate a full SaaS landing site")}
-          className="w-full flex items-center justify-center gap-2 py-1.5 rounded-lg border border-indigo-500/30 text-indigo-400 text-xs hover:bg-indigo-500/10 transition-colors"
-          data-ocid="builder.ai.generate_site_button"
+          onClick={() => setSubMode("search")}
+          data-ocid="builder.ai.search.tab"
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium transition-colors ${
+            subMode === "search"
+              ? "bg-indigo-600 text-white"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+          }`}
         >
-          <Wand2 className="w-3.5 h-3.5" />
-          Generate Full Site
+          <Search className="w-3 h-3" />
+          Search
         </button>
-        <div className="flex gap-2">
-          <input
-            ref={inputRef}
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask AI anything..."
-            className="flex-1 bg-input border border-border rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-indigo-500 transition-colors"
-            data-ocid="builder.ai.input"
-          />
-          <button
-            type="button"
-            onClick={() => sendMessage(input)}
-            disabled={!input.trim() || isTyping}
-            className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white hover:bg-indigo-500 disabled:opacity-40 transition-colors shrink-0"
-            data-ocid="builder.ai.send.button"
-          >
-            <Send className="w-3.5 h-3.5" />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setSubMode("chat")}
+          data-ocid="builder.ai.chat.tab"
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium transition-colors ${
+            subMode === "chat"
+              ? "bg-indigo-600 text-white"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+          }`}
+        >
+          <MessageSquare className="w-3 h-3" />
+          Chat
+        </button>
       </div>
+
+      {/* SEARCH MODE */}
+      {subMode === "search" && (
+        <div className="flex flex-col flex-1 min-h-0">
+          {/* Search input */}
+          <div className="px-3 py-2 border-b border-border/40">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search templates, ideas, styles..."
+                data-ocid="builder.ai.search_input"
+                className="w-full bg-input border border-border rounded-lg pl-8 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-indigo-500 transition-colors"
+              />
+            </div>
+          </div>
+
+          {/* Template results */}
+          <div className="flex-1 overflow-y-auto p-3 min-h-0">
+            {!searchQuery.trim() && (
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                Popular Templates
+              </p>
+            )}
+            {filteredTemplates.length === 0 ? (
+              <div
+                className="text-center py-8"
+                data-ocid="builder.ai.search.empty_state"
+              >
+                <Search className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
+                <p className="text-xs text-muted-foreground">
+                  No templates found
+                </p>
+                <p className="text-[10px] text-muted-foreground/60 mt-1">
+                  Try "blog", "store", or "event"
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                {filteredTemplates.map((template, idx) => (
+                  <motion.div
+                    key={template.id}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.15, delay: idx * 0.04 }}
+                    data-ocid={`builder.ai.template.item.${idx + 1}`}
+                    className="group border border-border/60 rounded-lg overflow-hidden bg-card hover:border-indigo-500/50 transition-colors"
+                  >
+                    {/* Thumbnail */}
+                    {template.thumbnail ? (
+                      <img
+                        src={template.thumbnail}
+                        alt={template.name}
+                        className="w-full h-24 object-cover"
+                      />
+                    ) : (
+                      <div
+                        className="w-full h-24 flex items-center justify-center text-2xl font-bold text-white/80"
+                        style={{
+                          background: `linear-gradient(135deg, ${
+                            [
+                              "#6366f1,#a855f7",
+                              "#0ea5e9,#06b6d4",
+                              "#10b981,#14b8a6",
+                              "#f59e0b,#f97316",
+                              "#ef4444,#f43f5e",
+                            ][idx % 5]
+                          })`,
+                        }}
+                      >
+                        {template.name.charAt(0)}
+                      </div>
+                    )}
+                    {/* Info */}
+                    <div className="p-2">
+                      <p className="text-[11px] font-semibold text-foreground leading-tight">
+                        {template.name}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2 leading-snug">
+                        {template.description}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => handleUseTemplate(template)}
+                        data-ocid={`builder.ai.template.button.${idx + 1}`}
+                        className="mt-1.5 w-full text-[10px] py-1 rounded-md bg-indigo-600 text-white hover:bg-indigo-500 transition-colors font-medium"
+                      >
+                        Use Template
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* CHAT MODE */}
+      {subMode === "chat" && (
+        <div className="flex flex-col flex-1 min-h-0">
+          {/* Quick action chips */}
+          <div className="px-3 py-2 border-b border-border/40 space-y-1.5">
+            <div className="flex gap-1 flex-wrap">
+              {QUICK_CHIPS_ROW1.map((q) => (
+                <button
+                  key={q}
+                  type="button"
+                  onClick={() => sendMessage(`Generate a ${q}`)}
+                  className="text-[10px] px-2 py-0.5 rounded-full border border-indigo-500/40 text-indigo-400 hover:bg-indigo-500/10 transition-colors"
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-1 flex-wrap">
+              {QUICK_CHIPS_ROW2.map((q) => (
+                <button
+                  key={q}
+                  type="button"
+                  onClick={() => sendMessage(`Generate a ${q}`)}
+                  className="text-[10px] px-2 py-0.5 rounded-full border border-indigo-500/40 text-indigo-400 hover:bg-indigo-500/10 transition-colors"
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Chat history */}
+          <div
+            ref={scrollRef}
+            className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0"
+          >
+            {messages.map((msg, i) => (
+              <motion.div
+                // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in block renderer
+                key={i}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+                className={`flex gap-2 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}
+              >
+                {msg.role === "ai" && (
+                  <div
+                    className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5"
+                    style={{
+                      background: "linear-gradient(135deg, #6366f1, #a855f7)",
+                    }}
+                  >
+                    <Bot className="w-3.5 h-3.5 text-white" />
+                  </div>
+                )}
+                <div
+                  className={`max-w-[85%] rounded-lg px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap ${
+                    msg.role === "user"
+                      ? "bg-indigo-600 text-white rounded-tr-none"
+                      : "bg-muted text-foreground rounded-tl-none"
+                  }`}
+                >
+                  {msg.content}
+                </div>
+              </motion.div>
+            ))}
+
+            {isTyping && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex gap-2 items-center"
+              >
+                <div
+                  className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center"
+                  style={{
+                    background: "linear-gradient(135deg, #6366f1, #a855f7)",
+                  }}
+                >
+                  <Bot className="w-3.5 h-3.5 text-white" />
+                </div>
+                <div className="bg-muted rounded-lg rounded-tl-none px-3 py-2.5 flex gap-1">
+                  {[0, 1, 2].map((dot) => (
+                    <motion.span
+                      key={dot}
+                      className="w-1.5 h-1.5 rounded-full bg-muted-foreground"
+                      animate={{ y: [0, -4, 0] }}
+                      transition={{
+                        duration: 0.6,
+                        repeat: Number.POSITIVE_INFINITY,
+                        delay: dot * 0.15,
+                      }}
+                    />
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </div>
+
+          {/* Input area */}
+          <div className="border-t border-border/60 p-3 space-y-2">
+            <button
+              type="button"
+              onClick={() => sendMessage("Generate a full SaaS landing site")}
+              className="w-full flex items-center justify-center gap-2 py-1.5 rounded-lg border border-indigo-500/30 text-indigo-400 text-xs hover:bg-indigo-500/10 transition-colors"
+              data-ocid="builder.ai.generate_site_button"
+            >
+              <Wand2 className="w-3.5 h-3.5" />
+              Generate Full Site
+            </button>
+            <div className="flex gap-2">
+              <input
+                ref={inputRef}
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask AI anything..."
+                className="flex-1 bg-input border border-border rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-indigo-500 transition-colors"
+                data-ocid="builder.ai.input"
+              />
+              <button
+                type="button"
+                onClick={() => sendMessage(input)}
+                disabled={!input.trim() || isTyping}
+                className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white hover:bg-indigo-500 disabled:opacity-40 transition-colors shrink-0"
+                data-ocid="builder.ai.send.button"
+              >
+                <Send className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2778,6 +3242,7 @@ function BuilderContent() {
         </div>
 
         {/* ── Center Canvas ── */}
+        {/* biome-ignore lint/a11y/useKeyWithClickEvents: pre-existing canvas click handler */}
         <div
           className="flex-1 overflow-y-auto bg-slate-950"
           onClick={(e) => {
