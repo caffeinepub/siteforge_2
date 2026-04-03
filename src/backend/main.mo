@@ -11,7 +11,7 @@ import Stripe "stripe/stripe";
 import OutCall "http-outcalls/outcall";
 import AccessControl "authorization/access-control";
 import MixinAuthorization "authorization/MixinAuthorization";
-import Array "mo:core/Array";
+
 
 actor {
   type Site = {
@@ -121,6 +121,21 @@ actor {
     id.toText();
   };
 
+  // Auto-create a default profile for a principal if one doesn't exist
+  func ensureProfileExists(principal : Principal) {
+    if (not userProfiles.containsKey(principal)) {
+      let pText = principal.toText();
+      let slug = if (pText.size() >= 8) { pText.chars().take(8) |> Text.fromIter(_) } else { pText };
+      let profile : UserProfile = {
+        username = "user_" # slug;
+        displayName = "User " # slug;
+        bio = "";
+        joinedAt = Time.now();
+      };
+      userProfiles.add(principal, profile);
+    };
+  };
+
   public shared ({ caller }) func recordLogin() : async () {
     if (caller.isAnonymous()) {
       Runtime.trap("Anonymous principals cannot record login");
@@ -131,6 +146,8 @@ actor {
       };
       case (?_) {};
     };
+    // Auto-create a profile on first login so profile updates never fail
+    ensureProfileExists(caller);
     let event : LoginEvent = {
       principal = caller;
       loginAt = Time.now();
@@ -372,8 +389,10 @@ actor {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can update profiles");
     };
+    // Ensure profile exists before updating (upsert)
+    ensureProfileExists(caller);
     let existingProfile = switch (userProfiles.get(caller)) {
-      case (null) { Runtime.trap("User profile does not exist") };
+      case (null) { Runtime.trap("Profile creation failed unexpectedly") };
       case (?profile) { profile };
     };
     let updatedProfile : UserProfile = {
@@ -389,8 +408,10 @@ actor {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can update profiles");
     };
+    // Ensure profile exists before updating (upsert)
+    ensureProfileExists(caller);
     let existingProfile = switch (userProfiles.get(caller)) {
-      case (null) { Runtime.trap("User profile does not exist") };
+      case (null) { Runtime.trap("Profile creation failed unexpectedly") };
       case (?profile) { profile };
     };
     let updatedProfile : UserProfile = {
@@ -406,7 +427,7 @@ actor {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can create profiles");
     };
-    if (userProfiles.containsKey(caller)) { Runtime.trap("User profile already exists") };
+    // Allow overwrite if profile already exists (idempotent upsert)
     let profile : UserProfile = {
       username;
       displayName;
@@ -435,8 +456,10 @@ actor {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can update profiles");
     };
+    // Ensure profile exists before updating (upsert)
+    ensureProfileExists(caller);
     let existingProfile = switch (userProfiles.get(caller)) {
-      case (null) { Runtime.trap("User profile does not exist") };
+      case (null) { Runtime.trap("Profile creation failed unexpectedly") };
       case (?profile) { profile };
     };
     let updatedProfile : UserProfile = {

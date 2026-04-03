@@ -50,6 +50,7 @@ import {
   usePublishSite,
   useUpdateSite,
 } from "../hooks/useQueries";
+import { useUserRegistration } from "../lib/userRegistration";
 
 // ============================================================
 // TYPES
@@ -2678,6 +2679,7 @@ function BuilderContent() {
   const createSite = useCreateSite();
   const updateSite = useUpdateSite();
   const publishSite = usePublishSite();
+  const { ensureRegistered } = useUserRegistration();
 
   const [siteTitle, setSiteTitle] = useState("Untitled Site");
   const [siteDescription, setSiteDescription] = useState("");
@@ -2841,6 +2843,7 @@ function BuilderContent() {
   const handleSave = async () => {
     const content = JSON.stringify(blocks);
     try {
+      await ensureRegistered();
       if (activeSiteId) {
         await updateSite.mutateAsync({
           id: activeSiteId,
@@ -2864,6 +2867,7 @@ function BuilderContent() {
   };
 
   const handlePublish = async () => {
+    await ensureRegistered();
     if (!activeSiteId) {
       toast.error("Please save your site first.");
       return;

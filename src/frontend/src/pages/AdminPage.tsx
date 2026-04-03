@@ -50,8 +50,6 @@ import {
   useAssignCallerUserRole,
   useGetAllUsers,
   useGetLoginEvents,
-  useInitializeAdmin,
-  useIsCallerAdmin,
   useIsStripeConfigured,
   useSetStripeConfiguration,
 } from "../hooks/useQueries";
@@ -345,28 +343,9 @@ function StripeSettingsTab() {
 }
 
 function UserManagementTab() {
-  const { data: isCallerAdmin, isLoading: isAdminLoading } = useIsCallerAdmin();
-  const initializeAdmin = useInitializeAdmin();
   const assignRole = useAssignCallerUserRole();
   const [principalId, setPrincipalId] = useState("");
   const [role, setRole] = useState<UserRole>(UserRole.user);
-  const [adminSecret, setAdminSecret] = useState("");
-
-  const handleClaimAdmin = async () => {
-    if (!adminSecret.trim()) {
-      toast.error("Admin secret is required");
-      return;
-    }
-    try {
-      await initializeAdmin.mutateAsync(adminSecret.trim());
-      toast.success("Admin role claimed successfully");
-      setAdminSecret("");
-    } catch (err) {
-      toast.error(
-        `Failed to claim admin role: ${err instanceof Error ? err.message : String(err)}`,
-      );
-    }
-  };
 
   const handleAssign = async () => {
     if (!principalId.trim()) {
@@ -383,78 +362,6 @@ function UserManagementTab() {
       );
     }
   };
-
-  if (isAdminLoading) {
-    return (
-      <div className="space-y-6" data-ocid="admin.users.loading_state">
-        <Skeleton className="h-16 w-full rounded-lg" />
-        <Skeleton className="h-48 w-full rounded-lg" />
-      </div>
-    );
-  }
-
-  if (!isCallerAdmin) {
-    return (
-      <div className="space-y-6" data-ocid="admin.users.panel">
-        <Alert className="border-amber-500/20 bg-amber-500/5">
-          <Shield className="h-4 w-4 text-amber-500" />
-          <AlertDescription className="text-muted-foreground">
-            You are not yet a backend admin. Enter the platform admin secret
-            below to claim admin privileges and unlock role management.
-          </AlertDescription>
-        </Alert>
-
-        <Card className="bg-card border-border card-glow">
-          <CardHeader>
-            <CardTitle className="text-foreground flex items-center gap-2">
-              <KeyRound className="w-5 h-5 text-primary" />
-              Initialize Admin Access
-            </CardTitle>
-            <CardDescription className="text-muted-foreground">
-              Enter the CAFFEINE_ADMIN_TOKEN secret to claim admin privileges.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="space-y-2">
-              <Label
-                htmlFor="admin-secret"
-                className="text-foreground text-sm font-medium"
-              >
-                Admin Secret Token
-              </Label>
-              <Input
-                id="admin-secret"
-                type="password"
-                placeholder="Enter admin secret token..."
-                value={adminSecret}
-                onChange={(e) => setAdminSecret(e.target.value)}
-                className="bg-background border-border text-foreground placeholder:text-muted-foreground"
-                data-ocid="admin.users.input"
-              />
-            </div>
-            <Button
-              onClick={handleClaimAdmin}
-              disabled={initializeAdmin.isPending}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-              data-ocid="admin.users.submit_button"
-            >
-              {initializeAdmin.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Claiming...
-                </>
-              ) : (
-                "Claim Admin Role"
-              )}
-            </Button>
-            <p className="text-xs text-muted-foreground">
-              Contact your platform administrator for the admin secret token.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">

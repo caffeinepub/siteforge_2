@@ -6,9 +6,7 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
-import { useActor } from "./hooks/useActor";
-import { useInternetIdentity } from "./hooks/useInternetIdentity";
+import { UserRegistrationProvider } from "./lib/userRegistration";
 import AdminPage from "./pages/AdminPage";
 import BuilderPage from "./pages/BuilderPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -18,32 +16,11 @@ import MarketplacePage from "./pages/MarketplacePage";
 import PurchaseSuccessPage from "./pages/PurchaseSuccessPage";
 import RegisterPage from "./pages/RegisterPage";
 
-function LoginTracker() {
-  const { identity } = useInternetIdentity();
-  const { actor } = useActor();
-  const hasRecorded = useRef(false);
-
-  useEffect(() => {
-    if (identity && actor && !hasRecorded.current) {
-      hasRecorded.current = true;
-      (actor as any).recordLogin().catch(() => {
-        // silently ignore errors
-      });
-    }
-    if (!identity) {
-      hasRecorded.current = false;
-    }
-  }, [identity, actor]);
-
-  return null;
-}
-
 const rootRoute = createRootRoute({
   component: () => (
-    <>
-      <LoginTracker />
+    <UserRegistrationProvider>
       <Outlet />
-    </>
+    </UserRegistrationProvider>
   ),
 });
 
