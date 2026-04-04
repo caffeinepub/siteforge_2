@@ -45,7 +45,7 @@ export function ProfileSetupModal({ open }: ProfileSetupModalProps) {
   return (
     <Dialog open={open}>
       <DialogContent
-        className="sm:max-w-md bg-card border-border"
+        className="max-w-[95vw] sm:max-w-md bg-card border-border max-h-[90vh] overflow-y-auto"
         data-ocid="profile_setup.dialog"
         onInteractOutside={(e) => e.preventDefault()}
       >
@@ -69,7 +69,7 @@ export function ProfileSetupModal({ open }: ProfileSetupModalProps) {
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Your full name"
-              className="bg-input border-border"
+              className="bg-input border-border w-full"
               data-ocid="profile_setup.input"
             />
           </div>
@@ -82,7 +82,7 @@ export function ProfileSetupModal({ open }: ProfileSetupModalProps) {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="@yourhandle"
-              className="bg-input border-border"
+              className="bg-input border-border w-full"
               data-ocid="profile_setup.username.input"
             />
           </div>
@@ -96,7 +96,7 @@ export function ProfileSetupModal({ open }: ProfileSetupModalProps) {
               onChange={(e) => setBio(e.target.value)}
               placeholder="Tell us about yourself..."
               rows={3}
-              className="bg-input border-border resize-none"
+              className="bg-input border-border resize-none w-full"
               data-ocid="profile_setup.textarea"
             />
           </div>

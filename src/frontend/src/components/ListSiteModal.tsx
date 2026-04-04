@@ -94,11 +94,8 @@ const ALL_PAYMENT_METHODS: {
   },
 ];
 
-// 1 USD ≈ 83.5 INR
 const USD_TO_INR = 83.5;
-// Platform PhonePe commission number
 const PLATFORM_PHONEPE = "9502010856";
-// Minimum price: ₹1 = ~$0.012
 const MIN_PRICE_INR = 1;
 const MIN_PRICE_USD = MIN_PRICE_INR / USD_TO_INR;
 
@@ -160,7 +157,6 @@ export function ListSiteModal({
     );
   };
 
-  // Derive USD and INR from whichever currency is active
   const inputValue = Number.parseFloat(priceInput) || 0;
   const priceUsd =
     priceCurrency === "inr" ? inputValue / USD_TO_INR : inputValue;
@@ -179,7 +175,7 @@ export function ListSiteModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!priceUsd || priceUsd < MIN_PRICE_USD) {
-      toast.error(`Minimum listing price is ₹${MIN_PRICE_INR}`);
+      toast.error(`Minimum listing price is \u20b9${MIN_PRICE_INR}`);
       return;
     }
     if (!description.trim()) {
@@ -218,7 +214,7 @@ export function ListSiteModal({
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent
-        className="sm:max-w-lg bg-card border-border max-h-[90vh] overflow-y-auto"
+        className="max-w-[95vw] sm:max-w-lg bg-card border-border max-h-[90vh] overflow-y-auto"
         data-ocid="list_site.dialog"
       >
         <DialogHeader>
@@ -244,7 +240,6 @@ export function ListSiteModal({
                   type="button"
                   onClick={() => {
                     if (priceCurrency !== "inr") {
-                      // convert displayed value from USD to INR
                       const usdVal = Number.parseFloat(priceInput) || 0;
                       setPriceInput(
                         usdVal > 0 ? (usdVal * USD_TO_INR).toFixed(0) : "",
@@ -264,7 +259,6 @@ export function ListSiteModal({
                   type="button"
                   onClick={() => {
                     if (priceCurrency !== "usd") {
-                      // convert displayed value from INR to USD
                       const inrVal = Number.parseFloat(priceInput) || 0;
                       setPriceInput(
                         inrVal > 0 ? (inrVal / USD_TO_INR).toFixed(2) : "",
@@ -283,10 +277,10 @@ export function ListSiteModal({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               {/* Active input — editable */}
               {priceCurrency === "inr" ? (
-                <div className="relative col-span-1">
+                <div className="relative flex-1">
                   <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     id="price"
@@ -296,12 +290,12 @@ export function ListSiteModal({
                     value={priceInput}
                     onChange={(e) => setPriceInput(e.target.value)}
                     placeholder="e.g. 500"
-                    className="pl-9 bg-input border-border"
+                    className="pl-9 bg-input border-border w-full"
                     data-ocid="list_site.input_inr"
                   />
                 </div>
               ) : (
-                <div className="relative col-span-1">
+                <div className="relative flex-1">
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     id="price"
@@ -311,7 +305,7 @@ export function ListSiteModal({
                     value={priceInput}
                     onChange={(e) => setPriceInput(e.target.value)}
                     placeholder="e.g. 9.99"
-                    className="pl-9 bg-input border-border"
+                    className="pl-9 bg-input border-border w-full"
                     data-ocid="list_site.input_usd"
                   />
                 </div>
@@ -319,31 +313,31 @@ export function ListSiteModal({
 
               {/* Converted value — read-only */}
               {priceCurrency === "inr" ? (
-                <div className="relative col-span-1">
+                <div className="relative flex-1">
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     readOnly
                     value={priceUsd > 0 ? `$${priceUsd.toFixed(2)}` : ""}
                     placeholder="USD (auto)"
-                    className="pl-9 bg-muted/30 border-border text-muted-foreground cursor-not-allowed"
+                    className="pl-9 bg-muted/30 border-border text-muted-foreground cursor-not-allowed w-full"
                   />
                 </div>
               ) : (
-                <div className="relative col-span-1">
+                <div className="relative flex-1">
                   <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     readOnly
                     value={priceInr > 0 ? priceInr.toFixed(0) : ""}
                     placeholder="INR (auto)"
-                    className="pl-9 bg-muted/30 border-border text-muted-foreground cursor-not-allowed"
+                    className="pl-9 bg-muted/30 border-border text-muted-foreground cursor-not-allowed w-full"
                   />
                 </div>
               )}
             </div>
             <p className="text-[11px] text-muted-foreground">
               {priceCurrency === "inr"
-                ? "Enter price in ₹ Rupees — USD shown auto-calculated (1 USD ≈ ₹83.5). Minimum ₹1."
-                : "Enter price in $ USD — INR shown auto-calculated (1 USD ≈ ₹83.5). Minimum ₹1."}
+                ? "Enter price in \u20b9 Rupees — USD shown auto-calculated (1 USD ≈ \u20b983.5). Minimum \u20b91."
+                : "Enter price in $ USD — INR shown auto-calculated (1 USD ≈ \u20b983.5). Minimum \u20b91."}
             </p>
           </div>
 
@@ -353,19 +347,21 @@ export function ListSiteModal({
               <div className="flex justify-between text-muted-foreground">
                 <span>Listing price</span>
                 <span>
-                  ₹{priceInr.toFixed(0)} / ${priceUsd.toFixed(2)}
+                  \u20b9{priceInr.toFixed(0)} / ${priceUsd.toFixed(2)}
                 </span>
               </div>
               <div className="flex justify-between text-orange-400">
                 <span>Platform commission (1%)</span>
                 <span>
-                  − ₹{(priceInr * 0.01).toFixed(0)} / ${commission.toFixed(2)}
+                  \u2212 \u20b9{(priceInr * 0.01).toFixed(0)} / $
+                  {commission.toFixed(2)}
                 </span>
               </div>
               <div className="flex justify-between font-semibold text-green-400 border-t border-border pt-1.5">
                 <span>You receive</span>
                 <span>
-                  ₹{(priceInr * 0.99).toFixed(0)} / ${sellerReceives.toFixed(2)}
+                  \u20b9{(priceInr * 0.99).toFixed(0)} / $
+                  {sellerReceives.toFixed(2)}
                 </span>
               </div>
               <p className="text-[10px] text-muted-foreground pt-0.5">
@@ -447,7 +443,7 @@ export function ListSiteModal({
                       }))
                     }
                     placeholder={m.accountPlaceholder}
-                    className="bg-input border-border text-sm h-9"
+                    className="bg-input border-border text-sm h-9 w-full"
                     data-ocid={`list_site.account_${m.id}.input`}
                   />
                   {m.accountHint && (
@@ -470,24 +466,24 @@ export function ListSiteModal({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe what buyers are getting..."
               rows={4}
-              className="bg-input border-border resize-none"
+              className="bg-input border-border resize-none w-full"
               data-ocid="list_site.textarea"
             />
           </div>
 
-          <DialogFooter className="gap-2">
+          <DialogFooter className="gap-2 flex-col sm:flex-row">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
-              className="border-border"
+              className="border-border w-full sm:w-auto"
               data-ocid="list_site.cancel_button"
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              className="bg-primary hover:bg-primary/90"
+              className="bg-primary hover:bg-primary/90 w-full sm:w-auto"
               disabled={listSite.isPending}
               data-ocid="list_site.submit_button"
             >

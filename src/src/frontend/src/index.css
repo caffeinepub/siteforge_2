@@ -1,0 +1,112 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: "BricolageGrotesque";
+  src: url("/assets/fonts/BricolageGrotesque.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "PlusJakartaSans";
+  src: url("/assets/fonts/PlusJakartaSans.woff2") format("woff2");
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --radius: 0.75rem;
+
+    /* Deep navy dark theme - extracted from design spec */
+    /* #0B1220 → oklch(0.14 0.025 250) */
+    /* #0F172A → oklch(0.165 0.03 252) */
+    /* #111827 → oklch(0.19 0.022 250) */
+    /* #0F1A2B → oklch(0.175 0.03 252) */
+    /* #1E293B → oklch(0.25 0.035 252) */
+    /* #F8FAFC → oklch(0.98 0.005 220) */
+    /* #94A3B8 → oklch(0.65 0.04 240) */
+    /* #3B82F6 → oklch(0.6 0.2 250) */
+    /* #2563EB → oklch(0.54 0.22 255) */
+    /* #60A5FA → oklch(0.7 0.165 245) */
+
+    --background: 0.145 0.025 252;
+    --foreground: 0.98 0.005 220;
+    --card: 0.19 0.022 250;
+    --card-foreground: 0.98 0.005 220;
+    --popover: 0.19 0.022 250;
+    --popover-foreground: 0.98 0.005 220;
+    --primary: 0.6 0.2 250;
+    --primary-foreground: 0.98 0.005 220;
+    --secondary: 0.25 0.035 252;
+    --secondary-foreground: 0.98 0.005 220;
+    --muted: 0.22 0.028 252;
+    --muted-foreground: 0.65 0.04 240;
+    --accent: 0.25 0.035 252;
+    --accent-foreground: 0.98 0.005 220;
+    --destructive: 0.577 0.245 27.325;
+    --destructive-foreground: 0.985 0 0;
+    --border: 0.25 0.035 252;
+    --input: 0.22 0.028 252;
+    --ring: 0.6 0.2 250;
+    --chart-1: 0.6 0.2 250;
+    --chart-2: 0.7 0.165 245;
+    --chart-3: 0.65 0.04 240;
+    --chart-4: 0.54 0.22 255;
+    --chart-5: 0.75 0.15 200;
+    --sidebar: 0.165 0.03 252;
+    --sidebar-foreground: 0.98 0.005 220;
+    --sidebar-primary: 0.6 0.2 250;
+    --sidebar-primary-foreground: 0.98 0.005 220;
+    --sidebar-accent: 0.22 0.028 252;
+    --sidebar-accent-foreground: 0.98 0.005 220;
+    --sidebar-border: 0.25 0.035 252;
+    --sidebar-ring: 0.6 0.2 250;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "PlusJakartaSans", system-ui, sans-serif;
+  }
+}
+
+@layer utilities {
+  .hero-glow {
+    background: radial-gradient(
+      ellipse 80% 60% at 50% 0%,
+      oklch(0.6 0.2 250 / 0.15) 0%,
+      transparent 70%
+    );
+  }
+
+  .card-glow {
+    box-shadow: 0 0 0 1px oklch(0.25 0.035 252), 0 4px 24px
+      oklch(0.145 0.025 252 / 0.8);
+  }
+
+  .blue-glow {
+    box-shadow: 0 0 20px oklch(0.6 0.2 250 / 0.3), 0 0 60px
+      oklch(0.6 0.2 250 / 0.1);
+  }
+
+  .icon-glow {
+    box-shadow: 0 0 12px oklch(0.6 0.2 250 / 0.5);
+  }
+
+  .nav-blur {
+    backdrop-filter: blur(12px);
+    background: oklch(0.145 0.025 252 / 0.85);
+  }
+}

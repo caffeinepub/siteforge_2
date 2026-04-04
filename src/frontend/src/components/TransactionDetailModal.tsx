@@ -63,7 +63,7 @@ export function TransactionDetailModal({
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent
-        className="sm:max-w-lg bg-card border-border"
+        className="max-w-[95vw] sm:max-w-lg bg-card border-border max-h-[90vh] overflow-y-auto"
         data-ocid="transaction_detail.dialog"
       >
         <DialogHeader>
@@ -79,10 +79,10 @@ export function TransactionDetailModal({
             <StatusBadge status={transaction.status} />
           </div>
           <Separator className="bg-border" />
-          <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             <div>
               <p className="text-muted-foreground mb-0.5">Transaction ID</p>
-              <p className="text-foreground font-mono text-xs truncate">
+              <p className="text-foreground font-mono text-xs break-all">
                 {transaction.id}
               </p>
             </div>
@@ -100,7 +100,7 @@ export function TransactionDetailModal({
             </div>
             <div>
               <p className="text-muted-foreground mb-0.5">Site ID</p>
-              <p className="text-foreground font-mono text-xs truncate">
+              <p className="text-foreground font-mono text-xs break-all">
                 {transaction.siteId}
               </p>
             </div>

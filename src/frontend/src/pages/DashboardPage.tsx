@@ -149,12 +149,10 @@ function DashboardContent() {
   });
   const [settingsLoaded, setSettingsLoaded] = useState(false);
 
-  // PhonePe UPI stored in localStorage keyed by principal
   const getPhonePeKey = (p: string) => `siteforge:phonepe_upi:${p}`;
   const [phonePeUPI, setPhonePeUPI] = useState<string>("");
   const [phonePeInput, setPhonePeInput] = useState<string>("");
   const [phonePeSaved, setPhonePeSaved] = useState(false);
-  // PhonePe PIN state
   const [pinNew, setPinNew] = useState("");
   const [pinConfirm, setPinConfirm] = useState("");
   const [pinSaved, setPinSaved] = useState(false);
@@ -165,7 +163,6 @@ function DashboardContent() {
   const showProfileSetup =
     isAuthenticated && !profileLoading && isFetched && userProfile === null;
 
-  // Auto-create profile silently on first login
   useEffect(() => {
     if (
       isFetched &&
@@ -182,13 +179,10 @@ function DashboardContent() {
           displayName: `User ${principal.slice(0, 6)}`,
           bio: "",
         })
-        .catch(() => {
-          // Silently ignore — profile may already exist or creation failed
-        });
+        .catch(() => {});
     }
   }, [isFetched, userProfile, identity, createProfile]);
 
-  // Load PhonePe UPI from localStorage when principal is available
   useEffect(() => {
     if (myPrincipal) {
       const stored =
@@ -198,7 +192,6 @@ function DashboardContent() {
     }
   }, [myPrincipal]);
 
-  // Populate settings form from profile
   if (userProfile && !settingsLoaded) {
     setSettingsForm({
       displayName: userProfile.displayName,
@@ -249,11 +242,11 @@ function DashboardContent() {
     <Layout>
       <ProfileSetupModal open={showProfileSetup} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
-            <h1 className="font-display font-bold text-3xl text-foreground">
+            <h1 className="font-display font-bold text-2xl sm:text-3xl text-foreground">
               {userProfile
                 ? `Welcome, ${userProfile.displayName}`
                 : "Dashboard"}
@@ -263,7 +256,7 @@ function DashboardContent() {
             </p>
           </div>
           <Button
-            className="bg-primary hover:bg-primary/90 font-semibold hidden sm:flex items-center gap-2"
+            className="bg-primary hover:bg-primary/90 font-semibold flex items-center gap-2 w-full sm:w-auto"
             asChild
           >
             <Link to="/builder/new" data-ocid="dashboard.new_site.button">
@@ -273,55 +266,58 @@ function DashboardContent() {
         </div>
 
         <Tabs defaultValue="sites" className="space-y-6">
-          <TabsList className="bg-card border border-border p-1 h-auto flex-wrap">
-            <TabsTrigger
-              value="sites"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              data-ocid="dashboard.sites.tab"
-            >
-              <LayoutDashboard className="w-4 h-4 mr-2" /> My Sites
-            </TabsTrigger>
-            <TabsTrigger
-              value="marketplace"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              data-ocid="dashboard.marketplace.tab"
-            >
-              <ShoppingBag className="w-4 h-4 mr-2" /> Marketplace
-            </TabsTrigger>
-            <TabsTrigger
-              value="transactions"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              data-ocid="dashboard.transactions.tab"
-            >
-              <Receipt className="w-4 h-4 mr-2" /> Transactions
-            </TabsTrigger>
-            <TabsTrigger
-              value="settings"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              data-ocid="dashboard.settings.tab"
-            >
-              <Settings className="w-4 h-4 mr-2" /> Settings
-            </TabsTrigger>
-            <TabsTrigger
-              value="admin"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              data-ocid="dashboard.admin.tab"
-            >
-              <Shield className="w-4 h-4 mr-2" /> Admin Panel
-            </TabsTrigger>
-            <TabsTrigger
-              value="chat"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground relative"
-              data-ocid="dashboard.chat.tab"
-            >
-              <MessageCircle className="w-4 h-4 mr-2" /> Chat
-              {unreadCount > 0 && (
-                <span className="ml-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 leading-none">
-                  {unreadCount > 99 ? "99+" : unreadCount}
-                </span>
-              )}
-            </TabsTrigger>
-          </TabsList>
+          {/* Scrollable tab bar on mobile */}
+          <div className="overflow-x-auto pb-1">
+            <TabsList className="bg-card border border-border p-1 h-auto flex-nowrap min-w-max">
+              <TabsTrigger
+                value="sites"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                data-ocid="dashboard.sites.tab"
+              >
+                <LayoutDashboard className="w-4 h-4 mr-2" /> My Sites
+              </TabsTrigger>
+              <TabsTrigger
+                value="marketplace"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                data-ocid="dashboard.marketplace.tab"
+              >
+                <ShoppingBag className="w-4 h-4 mr-2" /> Marketplace
+              </TabsTrigger>
+              <TabsTrigger
+                value="transactions"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                data-ocid="dashboard.transactions.tab"
+              >
+                <Receipt className="w-4 h-4 mr-2" /> Transactions
+              </TabsTrigger>
+              <TabsTrigger
+                value="settings"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                data-ocid="dashboard.settings.tab"
+              >
+                <Settings className="w-4 h-4 mr-2" /> Settings
+              </TabsTrigger>
+              <TabsTrigger
+                value="admin"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                data-ocid="dashboard.admin.tab"
+              >
+                <Shield className="w-4 h-4 mr-2" /> Admin Panel
+              </TabsTrigger>
+              <TabsTrigger
+                value="chat"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground relative"
+                data-ocid="dashboard.chat.tab"
+              >
+                <MessageCircle className="w-4 h-4 mr-2" /> Chat
+                {unreadCount > 0 && (
+                  <span className="ml-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 leading-none">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* My Sites Tab */}
           <TabsContent value="sites">
@@ -516,85 +512,87 @@ function DashboardContent() {
               </div>
             ) : (
               <div className="card-glow bg-card rounded-xl border border-border overflow-hidden">
-                <Table data-ocid="dashboard.transactions.table">
-                  <TableHeader>
-                    <TableRow className="border-border hover:bg-transparent">
-                      <TableHead className="text-muted-foreground">
-                        Site
-                      </TableHead>
-                      <TableHead className="text-muted-foreground">
-                        Role
-                      </TableHead>
-                      <TableHead className="text-muted-foreground">
-                        Price
-                      </TableHead>
-                      <TableHead className="text-muted-foreground">
-                        Status
-                      </TableHead>
-                      <TableHead className="text-muted-foreground">
-                        Date
-                      </TableHead>
-                      <TableHead className="text-muted-foreground">
-                        Action
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {dashboard.transactions.map((tx, i) => {
-                      const role =
-                        tx.buyer.toString() === myPrincipal
-                          ? "Buyer"
-                          : "Seller";
-                      return (
-                        <TableRow
-                          key={tx.id}
-                          className="border-border cursor-pointer hover:bg-accent/30"
-                          data-ocid={`dashboard.transactions.row.${i + 1}`}
-                          onClick={() => setTxModal(tx)}
-                        >
-                          <TableCell className="text-foreground font-medium text-sm">
-                            {tx.siteId.slice(0, 12)}...
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              className={
-                                role === "Buyer"
-                                  ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
-                                  : "bg-green-500/20 text-green-400 border-green-500/30"
-                              }
-                            >
-                              {role}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-foreground">
-                            ${(Number(tx.price) / 100).toFixed(2)}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1.5">
-                              {getTxStatusIcon(tx)}
-                              <span className="text-sm capitalize">
-                                {tx.status.__kind__}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
-                            {formatDate(tx.createdAt)}
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-xs text-primary"
-                              data-ocid={`dashboard.transactions.row.${i + 1}.button`}
-                            >
-                              View
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                <div className="overflow-x-auto">
+                  <Table data-ocid="dashboard.transactions.table">
+                    <TableHeader>
+                      <TableRow className="border-border hover:bg-transparent">
+                        <TableHead className="text-muted-foreground">
+                          Site
+                        </TableHead>
+                        <TableHead className="text-muted-foreground">
+                          Role
+                        </TableHead>
+                        <TableHead className="text-muted-foreground">
+                          Price
+                        </TableHead>
+                        <TableHead className="text-muted-foreground">
+                          Status
+                        </TableHead>
+                        <TableHead className="text-muted-foreground hidden sm:table-cell">
+                          Date
+                        </TableHead>
+                        <TableHead className="text-muted-foreground">
+                          Action
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {dashboard.transactions.map((tx, i) => {
+                        const role =
+                          tx.buyer.toString() === myPrincipal
+                            ? "Buyer"
+                            : "Seller";
+                        return (
+                          <TableRow
+                            key={tx.id}
+                            className="border-border cursor-pointer hover:bg-accent/30"
+                            data-ocid={`dashboard.transactions.row.${i + 1}`}
+                            onClick={() => setTxModal(tx)}
+                          >
+                            <TableCell className="text-foreground font-medium text-sm">
+                              {tx.siteId.slice(0, 12)}...
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                className={
+                                  role === "Buyer"
+                                    ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
+                                    : "bg-green-500/20 text-green-400 border-green-500/30"
+                                }
+                              >
+                                {role}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-foreground">
+                              ${(Number(tx.price) / 100).toFixed(2)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1.5">
+                                {getTxStatusIcon(tx)}
+                                <span className="text-sm capitalize">
+                                  {tx.status.__kind__}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-sm hidden sm:table-cell">
+                              {formatDate(tx.createdAt)}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-xs text-primary"
+                                data-ocid={`dashboard.transactions.row.${i + 1}.button`}
+                              >
+                                View
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             )}
           </TabsContent>
@@ -602,7 +600,7 @@ function DashboardContent() {
           {/* Settings Tab */}
           <TabsContent value="settings">
             <div className="max-w-lg">
-              <div className="card-glow bg-card rounded-xl border border-border p-6">
+              <div className="card-glow bg-card rounded-xl border border-border p-5 sm:p-6">
                 <h2 className="font-display font-bold text-xl text-foreground mb-6">
                   Profile Settings
                 </h2>
@@ -623,7 +621,7 @@ function DashboardContent() {
                           displayName: e.target.value,
                         }))
                       }
-                      className="bg-input border-border"
+                      className="bg-input border-border w-full"
                       data-ocid="settings.displayname.input"
                     />
                   </div>
@@ -643,7 +641,7 @@ function DashboardContent() {
                           username: e.target.value,
                         }))
                       }
-                      className="bg-input border-border"
+                      className="bg-input border-border w-full"
                       data-ocid="settings.username.input"
                     />
                   </div>
@@ -661,13 +659,13 @@ function DashboardContent() {
                         }))
                       }
                       rows={3}
-                      className="bg-input border-border resize-none"
+                      className="bg-input border-border resize-none w-full"
                       data-ocid="settings.bio.textarea"
                     />
                   </div>
                   <Button
                     type="submit"
-                    className="bg-primary hover:bg-primary/90 font-semibold"
+                    className="bg-primary hover:bg-primary/90 font-semibold w-full sm:w-auto"
                     disabled={isSavingSettings}
                     data-ocid="settings.save.button"
                   >
@@ -684,7 +682,7 @@ function DashboardContent() {
               </div>
 
               {/* Principal ID Section */}
-              <div className="card-glow bg-card rounded-xl border border-border p-6 mt-4">
+              <div className="card-glow bg-card rounded-xl border border-border p-5 sm:p-6 mt-4">
                 <h2 className="font-display font-bold text-xl text-foreground mb-1 flex items-center gap-2">
                   <KeyRound className="w-5 h-5 text-primary" />
                   Your Principal ID
@@ -720,7 +718,7 @@ function DashboardContent() {
               </div>
 
               {/* PhonePe UPI Section */}
-              <div className="card-glow bg-card rounded-xl border border-border p-6 mt-4">
+              <div className="card-glow bg-card rounded-xl border border-border p-5 sm:p-6 mt-4">
                 <h2 className="font-display font-bold text-xl text-foreground mb-1 flex items-center gap-2">
                   <Smartphone className="w-5 h-5 text-purple-500" />
                   PhonePe UPI
@@ -742,7 +740,7 @@ function DashboardContent() {
                         setPhonePeSaved(false);
                       }}
                       placeholder="yourname@upi or 9999999999"
-                      className="bg-input border-border"
+                      className="bg-input border-border w-full"
                       data-ocid="settings.phonepe.input"
                     />
                   </div>
@@ -754,7 +752,7 @@ function DashboardContent() {
                   )}
                   <Button
                     type="button"
-                    className="bg-purple-600 hover:bg-purple-700 text-white font-semibold"
+                    className="bg-purple-600 hover:bg-purple-700 text-white font-semibold w-full sm:w-auto"
                     onClick={() => {
                       if (!phonePeInput.trim()) {
                         toast.error(

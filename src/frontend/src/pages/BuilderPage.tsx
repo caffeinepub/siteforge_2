@@ -30,6 +30,7 @@ import {
   Save,
   Search,
   Send,
+  Settings,
   Smartphone,
   Star,
   Tablet,
@@ -38,6 +39,7 @@ import {
   Undo2,
   Users,
   Wand2,
+  X,
   Zap,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -4581,7 +4583,7 @@ What would you like to build? 🤖`;
 // GEMINI AI INTEGRATION
 // ============================================================
 
-const GEMINI_API_KEY = "AIzaSyC2_x-placeholder-replace-with-real-key";
+const GEMINI_API_KEY = "AIzaSyB-W4uWoW8kG_pspOlvg6AcdyDCAd1ntB4";
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 async function callGeminiAI(
@@ -5105,6 +5107,8 @@ function BuilderContent() {
   const [initialized, setInitialized] = useState(false);
   const [theme, setTheme] = useState<ThemePreset>("dark");
   const [device, setDevice] = useState<DeviceMode>("desktop");
+  const [showMobileBlocks, setShowMobileBlocks] = useState(false);
+  const [showMobileProps, setShowMobileProps] = useState(false);
   const [history, setHistory] = useState<Block[][]>([[createBlock("hero")]]);
   const [historyIndex, setHistoryIndex] = useState(0);
 
@@ -5351,7 +5355,7 @@ function BuilderContent() {
         <Input
           value={siteTitle}
           onChange={(e) => setSiteTitle(e.target.value)}
-          className="max-w-44 h-8 bg-input border-border text-sm font-semibold"
+          className="w-28 sm:max-w-44 h-8 bg-input border-border text-sm font-semibold"
           placeholder="Site title"
           data-ocid="builder.title.input"
         />
@@ -5413,7 +5417,7 @@ function BuilderContent() {
         {/* Block count badge */}
         <Badge
           variant="outline"
-          className="text-xs text-muted-foreground border-border"
+          className="text-xs text-muted-foreground border-border hidden sm:flex"
         >
           {blocks.length} {blocks.length === 1 ? "section" : "sections"}
         </Badge>
@@ -5423,7 +5427,7 @@ function BuilderContent() {
             href={publishedUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary text-xs flex items-center gap-1 hover:underline"
+            className="text-primary text-xs hidden sm:flex items-center gap-1 hover:underline"
           >
             <ExternalLink className="w-3 h-3" /> View Live
           </a>
@@ -5442,7 +5446,8 @@ function BuilderContent() {
           ) : (
             <Save className="w-3.5 h-3.5 mr-1.5" />
           )}
-          Save Draft
+          <span className="hidden sm:inline">Save Draft</span>
+          <span className="sm:hidden">Save</span>
         </Button>
 
         <Button
@@ -5464,7 +5469,34 @@ function BuilderContent() {
       {/* ── 3-column layout ── */}
       <div className="flex flex-1 overflow-hidden">
         {/* ── Left Panel ── */}
-        <div className="w-56 shrink-0 border-r border-border bg-card/50 flex flex-col overflow-hidden">
+        {/* Mobile blocks overlay */}
+        {showMobileBlocks && (
+          // biome-ignore lint/a11y/useKeyWithClickEvents: backdrop overlay dismiss
+          <div
+            className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm md:hidden"
+            onClick={() => setShowMobileBlocks(false)}
+          />
+        )}
+        <div
+          className={`${
+            showMobileBlocks
+              ? "fixed inset-y-0 left-0 z-50 md:relative"
+              : "hidden md:flex"
+          } w-64 md:w-56 shrink-0 border-r border-border bg-card flex flex-col overflow-hidden`}
+        >
+          {/* Mobile close button for left panel */}
+          <div className="md:hidden flex items-center justify-between px-3 py-2 border-b border-border bg-card/90">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Blocks
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowMobileBlocks(false)}
+              className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
           <Tabs defaultValue="blocks" className="flex flex-col h-full">
             <TabsList className="w-full rounded-none border-b border-border bg-card/80 shrink-0 h-9 p-0.5 gap-0.5">
               <TabsTrigger
@@ -5770,7 +5802,21 @@ function BuilderContent() {
         </div>
 
         {/* ── Right Panel: Properties ── */}
-        <div className="w-64 shrink-0 border-l border-border bg-card/50 flex flex-col overflow-hidden">
+        {/* Mobile props overlay */}
+        {showMobileProps && (
+          // biome-ignore lint/a11y/useKeyWithClickEvents: backdrop overlay dismiss
+          <div
+            className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm md:hidden"
+            onClick={() => setShowMobileProps(false)}
+          />
+        )}
+        <div
+          className={`${
+            showMobileProps
+              ? "fixed inset-y-0 right-0 z-50 md:relative"
+              : "hidden md:flex"
+          } w-64 shrink-0 border-l border-border bg-card flex flex-col overflow-hidden`}
+        >
           <div className="border-b border-border px-4 py-2.5 flex items-center gap-2">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex-1">
               Properties
@@ -5783,11 +5829,46 @@ function BuilderContent() {
                 {selectedBlock.type}
               </Badge>
             )}
+            <button
+              type="button"
+              onClick={() => setShowMobileProps(false)}
+              className="md:hidden w-6 h-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
           <ScrollArea className="flex-1">
             <PropertiesPanel block={selectedBlock} onChange={updateBlock} />
           </ScrollArea>
         </div>
+      </div>
+
+      {/* ── Mobile FABs ── */}
+      <div className="md:hidden fixed bottom-6 left-0 right-0 flex justify-between px-6 z-40 pointer-events-none">
+        <button
+          type="button"
+          onClick={() => {
+            setShowMobileBlocks((v) => !v);
+            setShowMobileProps(false);
+          }}
+          className="pointer-events-auto flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold shadow-xl hover:bg-indigo-500 active:scale-95 transition-all"
+          data-ocid="builder.mobile_blocks.button"
+        >
+          <Plus className="w-4 h-4" />
+          Blocks
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setShowMobileProps((v) => !v);
+            setShowMobileBlocks(false);
+          }}
+          className="pointer-events-auto flex items-center gap-2 px-4 py-2.5 rounded-xl bg-card border border-border text-foreground text-sm font-semibold shadow-xl hover:bg-accent active:scale-95 transition-all"
+          data-ocid="builder.mobile_props.button"
+        >
+          <Settings className="w-4 h-4" />
+          Properties
+        </button>
       </div>
     </div>
   );

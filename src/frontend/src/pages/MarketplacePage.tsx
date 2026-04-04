@@ -58,10 +58,8 @@ const THUMBNAILS = [
 
 type PaymentMethod = "icp" | "paypal" | "phonepe" | "fampay" | "stripe";
 
-// Exchange rates
 const USD_TO_INR = 83.5;
 const USD_TO_ICP = 0.012;
-// 1% platform commission
 const COMMISSION_RATE = 0.01;
 
 function getThumbnail(index: number) {
@@ -210,7 +208,6 @@ function CommissionBox({
   );
 }
 
-// Shows the seller's linked account details for a given payment method
 function SellerAccountInfo({
   method,
   siteId,
@@ -370,7 +367,7 @@ function SiteDetailModal({
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
       <DialogContent
-        className="sm:max-w-xl bg-card border-border max-h-[90vh] overflow-y-auto"
+        className="max-w-[95vw] sm:max-w-xl bg-card border-border max-h-[90vh] overflow-y-auto"
         data-ocid="marketplace.site_detail.dialog"
       >
         <DialogHeader>
@@ -388,9 +385,9 @@ function SiteDetailModal({
             />
           </div>
 
-          {/* Price row: USD + INR */}
+          {/* Price row */}
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Badge className="bg-primary/15 text-primary border-primary/25 text-base px-3 py-1">
                 ${priceUsd.toFixed(2)}
               </Badge>
@@ -479,7 +476,6 @@ function SiteDetailModal({
                           ≈ {icpAmount} ICP
                         </Badge>
                       </div>
-                      {/* Seller account info */}
                       <SellerAccountInfo method="icp" siteId={site.id} />
                       <Input
                         value={paymentInput}
@@ -518,7 +514,6 @@ function SiteDetailModal({
                       <p className="text-sm font-semibold text-foreground">
                         PayPal
                       </p>
-                      {/* Seller account info */}
                       <SellerAccountInfo method="paypal" siteId={site.id} />
                       <Input
                         type="email"
@@ -563,7 +558,6 @@ function SiteDetailModal({
                           <IndianRupee className="w-3 h-3" />₹{inrAmount}
                         </Badge>
                       </div>
-                      {/* Seller account info */}
                       <SellerAccountInfo method="phonepe" siteId={site.id} />
                       <Input
                         value={paymentInput}
@@ -572,7 +566,6 @@ function SiteDetailModal({
                         className="bg-card border-border"
                         data-ocid="marketplace.phonepe_upi.input"
                       />
-                      {/* PIN verification if user has set a PIN */}
                       {hasPhonePePIN(myPrincipal) && (
                         <div className="space-y-2 pt-1">
                           <p className="text-sm font-semibold text-foreground text-center">
@@ -638,7 +631,6 @@ function SiteDetailModal({
                           <IndianRupee className="w-3 h-3" />₹{inrAmount}
                         </Badge>
                       </div>
-                      {/* Seller account info */}
                       <SellerAccountInfo method="fampay" siteId={site.id} />
                       <Input
                         value={paymentInput}
@@ -756,6 +748,9 @@ export default function MarketplacePage() {
     return true;
   });
 
+  // Suppress unused variable lint
+  void selectedCategory;
+
   return (
     <Layout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -771,7 +766,7 @@ export default function MarketplacePage() {
               <ShoppingBag className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h1 className="font-display font-bold text-3xl text-foreground">
+              <h1 className="font-display font-bold text-2xl sm:text-3xl text-foreground">
                 Marketplace
               </h1>
               <p className="text-muted-foreground text-sm">
@@ -782,32 +777,35 @@ export default function MarketplacePage() {
 
           {/* Search + Filters */}
           <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1 max-w-md">
+            <div className="relative flex-1 max-w-full sm:max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search sites..."
-                className="pl-10 bg-card border-border"
+                className="pl-10 bg-card border-border w-full"
                 data-ocid="marketplace.search_input"
               />
             </div>
-            <div className="flex flex-wrap gap-2">
-              {CATEGORIES.map((cat) => (
-                <button
-                  type="button"
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                    selectedCategory === cat
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-card border border-border text-muted-foreground hover:text-foreground"
-                  }`}
-                  data-ocid="marketplace.filter.tab"
-                >
-                  {cat}
-                </button>
-              ))}
+            {/* Category filters — horizontal scroll on mobile */}
+            <div className="overflow-x-auto pb-1">
+              <div className="flex gap-2 min-w-max">
+                {CATEGORIES.map((cat) => (
+                  <button
+                    type="button"
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
+                      selectedCategory === cat
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-card border border-border text-muted-foreground hover:text-foreground"
+                    }`}
+                    data-ocid="marketplace.filter.tab"
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </motion.div>
@@ -877,7 +875,6 @@ export default function MarketplacePage() {
                     <p className="text-muted-foreground text-sm line-clamp-2 leading-relaxed mb-3">
                       {getListingDescription(site)}
                     </p>
-                    {/* Payment method badges */}
                     <div className="flex flex-wrap gap-1 mb-4">
                       {PAYMENT_METHODS.map((m) => (
                         <span

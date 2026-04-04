@@ -110,7 +110,7 @@ export default function AdminPage() {
                       setPinInput(e.target.value);
                       setPinError(false);
                     }}
-                    className={`bg-background border-border text-foreground text-center tracking-widest text-lg ${
+                    className={`bg-background border-border text-foreground text-center tracking-widest text-lg w-full ${
                       pinError
                         ? "border-destructive focus-visible:ring-destructive"
                         : ""
@@ -142,7 +142,7 @@ export default function AdminPage() {
 
   return (
     <Layout>
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {/* Header */}
         <div className="flex items-center gap-3 mb-8">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
@@ -159,40 +159,47 @@ export default function AdminPage() {
         </div>
 
         <Tabs defaultValue="stripe" className="space-y-6" data-ocid="admin.tab">
-          <TabsList className="bg-card border border-border">
-            <TabsTrigger
-              value="stripe"
-              className="flex items-center gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
-              data-ocid="admin.stripe.tab"
-            >
-              <CreditCard className="w-4 h-4" />
-              Stripe Settings
-            </TabsTrigger>
-            <TabsTrigger
-              value="users"
-              className="flex items-center gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
-              data-ocid="admin.users.tab"
-            >
-              <UserCog className="w-4 h-4" />
-              User Management
-            </TabsTrigger>
-            <TabsTrigger
-              value="logins"
-              className="flex items-center gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
-              data-ocid="admin.logins.tab"
-            >
-              <Activity className="w-4 h-4" />
-              User Logins
-            </TabsTrigger>
-            <TabsTrigger
-              value="verified"
-              className="flex items-center gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
-              data-ocid="admin.verified.tab"
-            >
-              <BadgeCheck className="w-4 h-4" />
-              Verified Users
-            </TabsTrigger>
-          </TabsList>
+          {/* Scrollable tab list on mobile */}
+          <div className="overflow-x-auto pb-1">
+            <TabsList className="bg-card border border-border flex-nowrap min-w-max">
+              <TabsTrigger
+                value="stripe"
+                className="flex items-center gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+                data-ocid="admin.stripe.tab"
+              >
+                <CreditCard className="w-4 h-4" />
+                <span className="hidden sm:inline">Stripe Settings</span>
+                <span className="sm:hidden">Stripe</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="users"
+                className="flex items-center gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+                data-ocid="admin.users.tab"
+              >
+                <UserCog className="w-4 h-4" />
+                <span className="hidden sm:inline">User Management</span>
+                <span className="sm:hidden">Users</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="logins"
+                className="flex items-center gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+                data-ocid="admin.logins.tab"
+              >
+                <Activity className="w-4 h-4" />
+                <span className="hidden sm:inline">User Logins</span>
+                <span className="sm:hidden">Logins</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="verified"
+                className="flex items-center gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+                data-ocid="admin.verified.tab"
+              >
+                <BadgeCheck className="w-4 h-4" />
+                <span className="hidden sm:inline">Verified Users</span>
+                <span className="sm:hidden">Verified</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="stripe" className="space-y-6">
             <StripeSettingsTab />
@@ -250,7 +257,7 @@ function StripeSettingsTab() {
   return (
     <Card className="bg-card border-border card-glow">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <CardTitle className="text-foreground flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-primary" />
@@ -291,7 +298,7 @@ function StripeSettingsTab() {
             placeholder="sk_live_..."
             value={secretKey}
             onChange={(e) => setSecretKey(e.target.value)}
-            className="bg-background border-border text-foreground placeholder:text-muted-foreground font-mono"
+            className="bg-background border-border text-foreground placeholder:text-muted-foreground font-mono w-full"
             data-ocid="admin.stripe.input"
           />
           <p className="text-xs text-muted-foreground">
@@ -313,7 +320,7 @@ function StripeSettingsTab() {
             placeholder="US,GB,CA"
             value={countries}
             onChange={(e) => setCountries(e.target.value)}
-            className="bg-background border-border text-foreground placeholder:text-muted-foreground"
+            className="bg-background border-border text-foreground placeholder:text-muted-foreground w-full"
             data-ocid="admin.stripe.countries.input"
           />
           <p className="text-xs text-muted-foreground">
@@ -325,7 +332,7 @@ function StripeSettingsTab() {
         <Button
           onClick={handleSave}
           disabled={setStripe.isPending}
-          className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold w-full sm:w-auto"
           data-ocid="admin.stripe.submit_button"
         >
           {setStripe.isPending ? (
@@ -399,7 +406,7 @@ function UserManagementTab() {
               placeholder="aaaaa-bbbbb-ccccc-ddddd-eee"
               value={principalId}
               onChange={(e) => setPrincipalId(e.target.value)}
-              className="bg-background border-border text-foreground placeholder:text-muted-foreground font-mono text-sm"
+              className="bg-background border-border text-foreground placeholder:text-muted-foreground font-mono text-sm w-full"
               data-ocid="admin.users.input"
             />
           </div>
@@ -414,7 +421,7 @@ function UserManagementTab() {
             <Select value={role} onValueChange={(v) => setRole(v as UserRole)}>
               <SelectTrigger
                 id="role-select"
-                className="bg-background border-border text-foreground"
+                className="bg-background border-border text-foreground w-full"
                 data-ocid="admin.users.select"
               >
                 <SelectValue placeholder="Select a role" />
@@ -445,7 +452,7 @@ function UserManagementTab() {
           <Button
             onClick={handleAssign}
             disabled={assignRole.isPending}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold w-full sm:w-auto"
             data-ocid="admin.users.submit_button"
           >
             {assignRole.isPending ? (
@@ -482,7 +489,7 @@ function UserLoginsTab() {
       data-ocid="admin.logins.panel"
     >
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <CardTitle className="text-foreground flex items-center gap-2">
               <Activity className="w-5 h-5 text-primary" />
@@ -494,7 +501,7 @@ function UserLoginsTab() {
           </div>
           {!isLoading && events && (
             <Badge
-              className="bg-primary/10 text-primary border-primary/20"
+              className="bg-primary/10 text-primary border-primary/20 self-start sm:self-auto"
               data-ocid="admin.logins.panel"
             >
               {events.length} {events.length === 1 ? "event" : "events"}
@@ -521,7 +528,7 @@ function UserLoginsTab() {
             </p>
           </div>
         ) : (
-          <div className="rounded-lg border border-border overflow-hidden">
+          <div className="rounded-lg border border-border overflow-x-auto">
             <Table data-ocid="admin.logins.table">
               <TableHeader>
                 <TableRow className="bg-muted/30 hover:bg-muted/30">
@@ -557,7 +564,7 @@ function UserLoginsTab() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs text-foreground max-w-[280px] truncate block">
+                          <span className="font-mono text-xs text-foreground max-w-[160px] sm:max-w-[280px] truncate block">
                             {principalStr}
                           </span>
                           <Button
@@ -596,13 +603,13 @@ function VerifiedUsersTab() {
     const current = isVerified(principal);
     setVerified(principal, !current);
     setVerifyTick((v) => v + 1);
-    toast.success(!current ? "Blue tick granted ✔" : "Blue tick removed");
+    toast.success(!current ? "Blue tick granted \u2714" : "Blue tick removed");
   };
 
   return (
     <Card className="bg-card border-border card-glow">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <CardTitle className="text-foreground flex items-center gap-2">
               <BadgeCheck className="w-5 h-5 text-[#1877F2]" />
@@ -613,7 +620,7 @@ function VerifiedUsersTab() {
             </CardDescription>
           </div>
           {!isLoading && allUsers && (
-            <Badge className="bg-[#1877F2]/10 text-[#1877F2] border-[#1877F2]/20">
+            <Badge className="bg-[#1877F2]/10 text-[#1877F2] border-[#1877F2]/20 self-start sm:self-auto">
               {allUsers.length} {allUsers.length === 1 ? "user" : "users"}
             </Badge>
           )}
@@ -632,7 +639,7 @@ function VerifiedUsersTab() {
             <p className="text-sm font-medium">No users registered yet.</p>
           </div>
         ) : (
-          <div className="rounded-lg border border-border overflow-hidden">
+          <div className="rounded-lg border border-border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/30 hover:bg-muted/30">
@@ -673,7 +680,7 @@ function VerifiedUsersTab() {
                           </Avatar>
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <span className="font-medium text-foreground text-sm truncate max-w-[140px]">
+                              <span className="font-medium text-foreground text-sm truncate max-w-[120px] sm:max-w-[140px]">
                                 {displayName}
                               </span>
                               {verified && (

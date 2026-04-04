@@ -134,6 +134,36 @@ const TRANSFER_STEPS = [
   },
 ];
 
+const QUICK_ACCESS = [
+  {
+    icon: Wrench,
+    title: "Builder",
+    description: "Create a new website visually with drag-and-drop blocks",
+    link: "/builder/new" as const,
+    ocid: "quickaccess.builder.button",
+    gradient: "from-violet-500/20 via-primary/10 to-transparent",
+    badge: "AI Powered",
+  },
+  {
+    icon: LayoutDashboard,
+    title: "Dashboard",
+    description: "Manage your sites, drafts, and published projects",
+    link: "/dashboard" as const,
+    ocid: "quickaccess.dashboard.button",
+    gradient: "from-cyan-500/20 via-primary/10 to-transparent",
+    badge: "Your Sites",
+  },
+  {
+    icon: ShoppingBag,
+    title: "Marketplace",
+    description: "Buy and sell premium websites with secure ownership transfer",
+    link: "/marketplace" as const,
+    ocid: "quickaccess.marketplace.button",
+    gradient: "from-emerald-500/20 via-primary/10 to-transparent",
+    badge: "Live Listings",
+  },
+];
+
 export default function LandingPage() {
   const { data: marketplaceListings } = useGetMarketplaceListings();
   const navigate = useNavigate();
@@ -192,7 +222,6 @@ export default function LandingPage() {
     <Layout>
       {/* Hero */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        {/* Background glows */}
         <div className="absolute inset-0 hero-glow pointer-events-none" />
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/5 rounded-full blur-3xl pointer-events-none" />
 
@@ -222,7 +251,7 @@ export default function LandingPage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Button
                 size="lg"
-                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 h-12 text-base"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 h-12 text-base w-full sm:w-auto"
                 asChild
               >
                 <Link
@@ -236,7 +265,7 @@ export default function LandingPage() {
               <Button
                 size="lg"
                 variant="outline"
-                className="border-border hover:bg-accent font-semibold px-8 h-12 text-base"
+                className="border-border hover:bg-accent font-semibold px-8 h-12 text-base w-full sm:w-auto"
                 asChild
               >
                 <Link to="/builder/new" data-ocid="hero.start_building.button">
@@ -246,7 +275,8 @@ export default function LandingPage() {
               </Button>
             </div>
 
-            <div className="mt-16 flex justify-center gap-8 text-sm text-muted-foreground">
+            {/* Stats row — wraps gracefully on small screens */}
+            <div className="mt-16 flex flex-wrap justify-center gap-x-8 gap-y-4 text-sm text-muted-foreground">
               {[
                 { label: "Sites Published", value: "12,400+" },
                 { label: "Marketplace Sales", value: "$3.2M+" },
@@ -261,6 +291,74 @@ export default function LandingPage() {
               ))}
             </div>
           </motion.div>
+        </div>
+      </section>
+
+      {/* Quick Access */}
+      <section className="py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-12"
+          >
+            <h2 className="font-display font-bold text-3xl sm:text-4xl text-foreground mb-3">
+              Jump Right In
+            </h2>
+            <p className="text-muted-foreground max-w-md mx-auto">
+              Everything is one tap away — start building, check your sites, or
+              browse the marketplace.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {QUICK_ACCESS.map((item, i) => (
+              <motion.div
+                key={item.title}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.12, duration: 0.55 }}
+                whileHover={{ scale: 1.025 }}
+              >
+                <Link
+                  to={item.link}
+                  data-ocid={item.ocid}
+                  className="group relative flex flex-col h-full card-glow bg-card border border-border hover:border-primary/50 rounded-2xl p-7 overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-primary/10"
+                >
+                  {/* background gradient blob */}
+                  <div
+                    className={`absolute inset-0 bg-gradient-to-br ${item.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none`}
+                  />
+
+                  <div className="relative flex items-start justify-between mb-5">
+                    <div className="w-14 h-14 bg-primary/15 rounded-xl flex items-center justify-center icon-glow group-hover:bg-primary/25 transition-colors duration-300">
+                      <item.icon className="w-7 h-7 text-primary" />
+                    </div>
+                    <Badge className="bg-primary/10 text-primary border-primary/20 text-xs font-medium">
+                      {item.badge}
+                    </Badge>
+                  </div>
+
+                  <div className="relative flex-1">
+                    <h3 className="font-display font-bold text-xl text-foreground mb-2">
+                      {item.title}
+                    </h3>
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                      {item.description}
+                    </p>
+                  </div>
+
+                  <div className="relative mt-6 flex items-center gap-2 text-primary text-sm font-semibold">
+                    <span>Open {item.title}</span>
+                    <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+                  </div>
+                </Link>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -363,7 +461,7 @@ export default function LandingPage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="flex justify-between items-end mb-12"
+            className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-12"
           >
             <div>
               <h2 className="font-display font-bold text-3xl sm:text-4xl text-foreground mb-3">
@@ -375,7 +473,7 @@ export default function LandingPage() {
             </div>
             <Button
               variant="outline"
-              className="border-border hidden sm:flex items-center gap-2"
+              className="border-border flex items-center gap-2 w-full sm:w-auto"
               asChild
             >
               <Link to="/marketplace" data-ocid="featured.view_all.button">
@@ -441,7 +539,7 @@ export default function LandingPage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="relative bg-card border border-border rounded-2xl p-12 overflow-hidden"
+            className="relative bg-card border border-border rounded-2xl p-8 sm:p-12 overflow-hidden"
           >
             <div className="absolute inset-0 hero-glow opacity-50 pointer-events-none" />
             <div className="relative">
@@ -468,7 +566,6 @@ export default function LandingPage() {
       </section>
 
       {/* ── Slide-out Nav Menu ── */}
-      {/* Hamburger trigger */}
       <button
         type="button"
         onClick={() => setMenuOpen(true)}
@@ -479,7 +576,6 @@ export default function LandingPage() {
         <Menu className="h-5 w-5" />
       </button>
 
-      {/* Overlay */}
       <AnimatePresence>
         {menuOpen && (
           <motion.div
@@ -494,7 +590,6 @@ export default function LandingPage() {
         )}
       </AnimatePresence>
 
-      {/* Slide-out panel */}
       <AnimatePresence>
         {menuOpen && (
           <motion.div
@@ -505,7 +600,6 @@ export default function LandingPage() {
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
             className="fixed top-0 right-0 h-full w-72 z-[120] bg-background border-l border-border shadow-2xl flex flex-col"
           >
-            {/* Panel header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-border">
               <span className="font-display font-bold text-foreground text-lg">
                 Navigation
@@ -520,7 +614,6 @@ export default function LandingPage() {
               </button>
             </div>
 
-            {/* Nav buttons */}
             <div className="flex-1 px-4 py-6 flex flex-col gap-2">
               <Link
                 to="/dashboard"
@@ -552,10 +645,8 @@ export default function LandingPage() {
                 Build
               </Link>
 
-              {/* Divider */}
               <div className="my-2 border-t border-border" />
 
-              {/* Admin Panel button below the three */}
               <button
                 type="button"
                 onClick={handleOpenPinModal}
@@ -572,7 +663,10 @@ export default function LandingPage() {
 
       {/* PIN entry dialog */}
       <Dialog open={pinModalOpen} onOpenChange={handleClosePinModal}>
-        <DialogContent className="sm:max-w-sm" data-ocid="admin.dialog">
+        <DialogContent
+          className="max-w-[95vw] sm:max-w-sm"
+          data-ocid="admin.dialog"
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Shield className="w-5 h-5 text-primary" />

@@ -99,13 +99,12 @@ export function UserProfileModal({
     });
   };
 
-  // Suppress unused variable warning — followToggle is used to force re-render
   void followToggle;
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent
-        className="bg-card border-border max-w-sm"
+        className="max-w-[95vw] sm:max-w-sm bg-card border-border max-h-[90vh] overflow-y-auto"
         data-ocid="profile.modal"
       >
         <DialogHeader>
@@ -152,7 +151,7 @@ export function UserProfileModal({
           )}
 
           {/* Stats */}
-          <div className="flex items-center gap-6 text-center border border-border rounded-xl px-6 py-3 bg-background/50 w-full justify-center">
+          <div className="flex items-center gap-4 sm:gap-6 text-center border border-border rounded-xl px-4 sm:px-6 py-3 bg-background/50 w-full justify-center flex-wrap">
             <div>
               <p className="text-lg font-bold text-foreground">
                 {followersCount}
