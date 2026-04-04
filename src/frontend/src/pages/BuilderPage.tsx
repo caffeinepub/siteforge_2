@@ -247,6 +247,86 @@ type AccordionItemBlock = {
   answer: string;
   defaultOpen: boolean;
 };
+type NewsletterSignupBlock = {
+  type: "newsletter-signup";
+  heading: string;
+  subtext: string;
+  placeholder: string;
+  buttonText: string;
+  buttonColor: string;
+};
+type ProgressBarBlock = {
+  type: "progress-bar";
+  heading: string;
+  items: { label: string; percent: number; color: string }[];
+};
+type TimelineBlock = {
+  type: "timeline";
+  heading: string;
+  items: { year: string; title: string; description: string }[];
+};
+type BeforeAfterBlock = {
+  type: "before-after";
+  heading: string;
+  beforeLabel: string;
+  afterLabel: string;
+  beforeColor: string;
+  afterColor: string;
+  beforeText: string;
+  afterText: string;
+};
+type RatingReviewBlock = {
+  type: "rating-review";
+  heading: string;
+  overallScore: number;
+  totalReviews: number;
+  breakdown: { stars: number; percent: number }[];
+  featuredReview: { author: string; rating: number; text: string };
+};
+type ProductCardBlock = {
+  type: "product-card";
+  heading: string;
+  items: { name: string; price: string; badge?: string; color: string }[];
+};
+type AnnouncementBarBlock = {
+  type: "announcement-bar";
+  message: string;
+  bgColor: string;
+  textColor: string;
+  emoji: string;
+  link?: string;
+  linkText?: string;
+};
+type ColumnsTextBlock = {
+  type: "columns-text";
+  columns: number;
+  items: { heading: string; body: string }[];
+};
+type TableBlockItem = {
+  type: "table-block";
+  heading: string;
+  headers: string[];
+  rows: string[][];
+};
+type EmbedHtmlBlock = {
+  type: "embed-html";
+  html: string;
+  height: number;
+  label: string;
+};
+type AudioPlayerBlock = {
+  type: "audio-player";
+  title: string;
+  artist: string;
+  audioUrl: string;
+  coverColor: string;
+};
+type PortfolioGridBlock = {
+  type: "portfolio-grid";
+  heading: string;
+  categories: string[];
+  items: { title: string; category: string; color: string; src?: string }[];
+};
 type Block =
   | HeroBlock
   | FeaturesBlock
@@ -274,7 +354,19 @@ type Block =
   | CountdownBlock
   | RichTextBlock
   | IconTextBlock
-  | AccordionItemBlock;
+  | AccordionItemBlock
+  | NewsletterSignupBlock
+  | ProgressBarBlock
+  | TimelineBlock
+  | BeforeAfterBlock
+  | RatingReviewBlock
+  | ProductCardBlock
+  | AnnouncementBarBlock
+  | ColumnsTextBlock
+  | TableBlockItem
+  | EmbedHtmlBlock
+  | AudioPlayerBlock
+  | PortfolioGridBlock;
 
 type ThemePreset = "dark" | "light" | "ocean" | "forest" | "sunset";
 type DeviceMode = "desktop" | "tablet" | "mobile";
@@ -367,6 +459,78 @@ const SECTION_TYPES: {
   { type: "pricing", icon: DollarSign, label: "Pricing", category: "Commerce" },
   { type: "stats", icon: TrendingUp, label: "Stats", category: "Commerce" },
   { type: "contact", icon: Mail, label: "Contact", category: "Commerce" },
+  {
+    type: "newsletter-signup",
+    icon: Mail,
+    label: "Newsletter Signup",
+    category: "Commerce",
+  },
+  {
+    type: "product-card",
+    icon: DollarSign,
+    label: "Product Cards",
+    category: "Commerce",
+  },
+  {
+    type: "progress-bar",
+    icon: BarChart2,
+    label: "Progress Bars",
+    category: "Content",
+  },
+  {
+    type: "timeline",
+    icon: TrendingUp,
+    label: "Timeline",
+    category: "Content",
+  },
+  {
+    type: "table-block",
+    icon: AlignJustify,
+    label: "Table",
+    category: "Content",
+  },
+  {
+    type: "before-after",
+    icon: Copy,
+    label: "Before & After",
+    category: "Interactive",
+  },
+  {
+    type: "embed-html",
+    icon: Globe,
+    label: "Custom Embed",
+    category: "Interactive",
+  },
+  {
+    type: "rating-review",
+    icon: Star,
+    label: "Rating & Reviews",
+    category: "People & Social",
+  },
+  {
+    type: "announcement-bar",
+    icon: Zap,
+    label: "Announcement Bar",
+    category: "Layout",
+  },
+  {
+    type: "columns-text",
+    icon: Layout,
+    label: "Columns Text",
+    category: "Layout",
+  },
+  {
+    type: "audio-player",
+    icon: Phone,
+    label: "Audio Player",
+    category: "Media",
+  },
+  {
+    type: "portfolio-grid",
+    icon: Image,
+    label: "Portfolio Grid",
+    category: "Media",
+  },
 ];
 
 const THEME_PRESETS: Record<
@@ -901,6 +1065,202 @@ function createBlock(type: Block["type"]): Block {
           { value: "99.9%", label: "Uptime" },
           { value: "50+", label: "Countries" },
           { value: "$2M+", label: "Revenue Generated" },
+        ],
+      };
+    case "newsletter-signup":
+      return {
+        type: "newsletter-signup",
+        heading: "Stay in the Loop",
+        subtext:
+          "Get the latest updates delivered straight to your inbox. No spam, ever.",
+        placeholder: "Enter your email address",
+        buttonText: "Subscribe",
+        buttonColor: "#6366f1",
+      };
+    case "progress-bar":
+      return {
+        type: "progress-bar",
+        heading: "Our Skills",
+        items: [
+          { label: "Web Design", percent: 92, color: "#6366f1" },
+          { label: "Development", percent: 85, color: "#22c55e" },
+          { label: "Marketing", percent: 78, color: "#f59e0b" },
+          { label: "Strategy", percent: 70, color: "#ec4899" },
+        ],
+      };
+    case "timeline":
+      return {
+        type: "timeline",
+        heading: "Our Journey",
+        items: [
+          {
+            year: "2021",
+            title: "Founded",
+            description: "Started with a bold idea and a small team of 3.",
+          },
+          {
+            year: "2022",
+            title: "First Product",
+            description: "Launched our MVP to 1,000 early adopters.",
+          },
+          {
+            year: "2023",
+            title: "Series A",
+            description: "Raised $5M to scale the platform globally.",
+          },
+          {
+            year: "2024",
+            title: "1M Users",
+            description: "Reached one million active users worldwide.",
+          },
+        ],
+      };
+    case "before-after":
+      return {
+        type: "before-after",
+        heading: "See the Difference",
+        beforeLabel: "Before",
+        afterLabel: "After",
+        beforeColor: "#1e293b",
+        afterColor: "#6366f1",
+        beforeText: "Manual processes, scattered tools, and wasted time.",
+        afterText: "Streamlined workflow, unified platform, 10x productivity.",
+      };
+    case "rating-review":
+      return {
+        type: "rating-review",
+        heading: "Customer Reviews",
+        overallScore: 4.8,
+        totalReviews: 1247,
+        breakdown: [
+          { stars: 5, percent: 72 },
+          { stars: 4, percent: 18 },
+          { stars: 3, percent: 6 },
+          { stars: 2, percent: 2 },
+          { stars: 1, percent: 2 },
+        ],
+        featuredReview: {
+          author: "Sarah K.",
+          rating: 5,
+          text: "Absolutely transformed the way our team works. The interface is intuitive and the results speak for themselves.",
+        },
+      };
+    case "product-card":
+      return {
+        type: "product-card",
+        heading: "Featured Products",
+        items: [
+          {
+            name: "Premium Plan",
+            price: "$49/mo",
+            badge: "Popular",
+            color: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+          },
+          {
+            name: "Starter Kit",
+            price: "$19/mo",
+            color: "linear-gradient(135deg,#22c55e,#16a34a)",
+          },
+          {
+            name: "Enterprise",
+            price: "Custom",
+            badge: "New",
+            color: "linear-gradient(135deg,#f59e0b,#d97706)",
+          },
+        ],
+      };
+    case "announcement-bar":
+      return {
+        type: "announcement-bar",
+        message: "🚀 New feature released! Check out our latest update.",
+        bgColor: "#6366f1",
+        textColor: "#ffffff",
+        emoji: "🚀",
+        link: "#",
+        linkText: "Learn more →",
+      };
+    case "columns-text":
+      return {
+        type: "columns-text",
+        columns: 3,
+        items: [
+          {
+            heading: "Our Mission",
+            body: "We believe in creating tools that empower everyone to build amazing things on the web.",
+          },
+          {
+            heading: "Our Vision",
+            body: "A world where anyone can publish their ideas online without technical barriers.",
+          },
+          {
+            heading: "Our Values",
+            body: "Transparency, innovation, and relentless focus on the user experience guide everything we do.",
+          },
+        ],
+      };
+    case "table-block":
+      return {
+        type: "table-block",
+        heading: "Feature Comparison",
+        headers: ["Feature", "Starter", "Pro", "Enterprise"],
+        rows: [
+          ["Custom Domain", "✗", "✓", "✓"],
+          ["Analytics", "Basic", "Advanced", "Full Suite"],
+          ["Support", "Email", "Priority", "Dedicated"],
+          ["Seats", "1", "5", "Unlimited"],
+        ],
+      };
+    case "embed-html":
+      return {
+        type: "embed-html",
+        html: "<div style='padding:20px;text-align:center;color:#888;'>Your custom HTML/embed code here</div>",
+        height: 200,
+        label: "Custom Embed",
+      };
+    case "audio-player":
+      return {
+        type: "audio-player",
+        title: "Journey to the Stars",
+        artist: "Cosmic Sounds",
+        audioUrl: "",
+        coverColor: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+      };
+    case "portfolio-grid":
+      return {
+        type: "portfolio-grid",
+        heading: "Portfolio",
+        categories: ["All", "Design", "Dev", "Motion"],
+        items: [
+          {
+            title: "Brand Identity",
+            category: "Design",
+            color: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+          },
+          {
+            title: "E-Commerce App",
+            category: "Dev",
+            color: "linear-gradient(135deg,#22c55e,#16a34a)",
+          },
+          {
+            title: "Motion Reel",
+            category: "Motion",
+            color: "linear-gradient(135deg,#f59e0b,#d97706)",
+          },
+          {
+            title: "UI System",
+            category: "Design",
+            color: "linear-gradient(135deg,#ec4899,#be185d)",
+          },
+          {
+            title: "Dashboard",
+            category: "Dev",
+            color: "linear-gradient(135deg,#0ea5e9,#0284c7)",
+          },
+          {
+            title: "Brand Film",
+            category: "Motion",
+            color: "linear-gradient(135deg,#14b8a6,#0f766e)",
+          },
         ],
       };
   }
@@ -2466,6 +2826,851 @@ function BlockPreview({
         onClick={onClick}
         theme={theme}
       />
+    );
+  }
+
+  if (block.type === "newsletter-signup") {
+    return (
+      // biome-ignore lint/a11y/useKeyWithClickEvents: pre-existing pattern in canvas block rendering
+      <div
+        className={base}
+        onClick={onClick}
+        style={{
+          background: t.card,
+          padding: "28px 24px",
+          textAlign: "center",
+          border: selected ? "2px solid #6366f1" : "2px solid transparent",
+        }}
+      >
+        <h3
+          style={{
+            color: t.text,
+            fontWeight: 700,
+            fontSize: 18,
+            marginBottom: 6,
+          }}
+        >
+          {block.heading}
+        </h3>
+        <p
+          style={{
+            color: t.text,
+            opacity: 0.6,
+            fontSize: 13,
+            marginBottom: 16,
+          }}
+        >
+          {block.subtext}
+        </p>
+        <div
+          style={{ display: "flex", gap: 8, maxWidth: 400, margin: "0 auto" }}
+        >
+          <div
+            style={{
+              flex: 1,
+              background: t.bg,
+              border: `1px solid ${t.border}`,
+              borderRadius: 6,
+              padding: "8px 12px",
+              color: t.text,
+              opacity: 0.5,
+              fontSize: 13,
+            }}
+          >
+            {block.placeholder}
+          </div>
+          <button
+            type="button"
+            style={{
+              background: block.buttonColor,
+              color: "#fff",
+              border: "none",
+              borderRadius: 6,
+              padding: "8px 18px",
+              fontWeight: 600,
+              fontSize: 13,
+              cursor: "pointer",
+            }}
+          >
+            {block.buttonText}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "progress-bar") {
+    return (
+      // biome-ignore lint/a11y/useKeyWithClickEvents: pre-existing pattern in canvas block rendering
+      <div
+        className={base}
+        onClick={onClick}
+        style={{
+          background: t.card,
+          padding: "24px",
+          border: selected ? "2px solid #6366f1" : "2px solid transparent",
+        }}
+      >
+        <h3
+          style={{
+            color: t.text,
+            fontWeight: 700,
+            fontSize: 16,
+            marginBottom: 16,
+          }}
+        >
+          {block.heading}
+        </h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {block.items.map((item, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in canvas block rendering
+            <div key={i}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: 4,
+                }}
+              >
+                <span style={{ color: t.text, fontSize: 13 }}>
+                  {item.label}
+                </span>
+                <span
+                  style={{ color: item.color, fontSize: 13, fontWeight: 600 }}
+                >
+                  {item.percent}%
+                </span>
+              </div>
+              <div
+                style={{
+                  background: t.bg,
+                  borderRadius: 99,
+                  height: 8,
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    width: `${item.percent}%`,
+                    background: item.color,
+                    height: "100%",
+                    borderRadius: 99,
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "timeline") {
+    return (
+      // biome-ignore lint/a11y/useKeyWithClickEvents: pre-existing pattern in canvas block rendering
+      <div
+        className={base}
+        onClick={onClick}
+        style={{
+          background: t.card,
+          padding: "24px",
+          border: selected ? "2px solid #6366f1" : "2px solid transparent",
+        }}
+      >
+        <h3
+          style={{
+            color: t.text,
+            fontWeight: 700,
+            fontSize: 16,
+            marginBottom: 20,
+            textAlign: "center",
+          }}
+        >
+          {block.heading}
+        </h3>
+        <div style={{ position: "relative", paddingLeft: 32 }}>
+          <div
+            style={{
+              position: "absolute",
+              left: 10,
+              top: 0,
+              bottom: 0,
+              width: 2,
+              background: t.border,
+            }}
+          />
+          {block.items.map((item, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in canvas block rendering
+            <div key={i} style={{ position: "relative", marginBottom: 18 }}>
+              <div
+                style={{
+                  position: "absolute",
+                  left: -26,
+                  top: 3,
+                  width: 12,
+                  height: 12,
+                  borderRadius: "50%",
+                  background: t.accent,
+                  border: `2px solid ${t.bg}`,
+                }}
+              />
+              <div
+                style={{
+                  color: t.accent,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  marginBottom: 2,
+                }}
+              >
+                {item.year}
+              </div>
+              <div style={{ color: t.text, fontWeight: 600, fontSize: 13 }}>
+                {item.title}
+              </div>
+              <div
+                style={{
+                  color: t.text,
+                  opacity: 0.6,
+                  fontSize: 12,
+                  marginTop: 2,
+                }}
+              >
+                {item.description}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "before-after") {
+    return (
+      // biome-ignore lint/a11y/useKeyWithClickEvents: pre-existing pattern in canvas block rendering
+      <div
+        className={base}
+        onClick={onClick}
+        style={{
+          background: t.card,
+          padding: "24px",
+          border: selected ? "2px solid #6366f1" : "2px solid transparent",
+        }}
+      >
+        <h3
+          style={{
+            color: t.text,
+            fontWeight: 700,
+            fontSize: 16,
+            marginBottom: 16,
+            textAlign: "center",
+          }}
+        >
+          {block.heading}
+        </h3>
+        <div
+          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
+        >
+          <div
+            style={{
+              background: block.beforeColor,
+              borderRadius: 8,
+              padding: 16,
+            }}
+          >
+            <div
+              style={{
+                color: "#fff",
+                fontWeight: 700,
+                fontSize: 12,
+                marginBottom: 6,
+                opacity: 0.8,
+              }}
+            >
+              {block.beforeLabel}
+            </div>
+            <div style={{ color: "#fff", fontSize: 12, opacity: 0.9 }}>
+              {block.beforeText}
+            </div>
+          </div>
+          <div
+            style={{
+              background: block.afterColor,
+              borderRadius: 8,
+              padding: 16,
+            }}
+          >
+            <div
+              style={{
+                color: "#fff",
+                fontWeight: 700,
+                fontSize: 12,
+                marginBottom: 6,
+                opacity: 0.8,
+              }}
+            >
+              {block.afterLabel}
+            </div>
+            <div style={{ color: "#fff", fontSize: 12, opacity: 0.9 }}>
+              {block.afterText}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "rating-review") {
+    return (
+      // biome-ignore lint/a11y/useKeyWithClickEvents: pre-existing pattern in canvas block rendering
+      <div
+        className={base}
+        onClick={onClick}
+        style={{
+          background: t.card,
+          padding: "24px",
+          border: selected ? "2px solid #6366f1" : "2px solid transparent",
+        }}
+      >
+        <h3
+          style={{
+            color: t.text,
+            fontWeight: 700,
+            fontSize: 16,
+            marginBottom: 16,
+          }}
+        >
+          {block.heading}
+        </h3>
+        <div style={{ display: "flex", gap: 20, marginBottom: 16 }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 36, fontWeight: 800, color: t.accent }}>
+              {block.overallScore}
+            </div>
+            <div style={{ color: "#f59e0b", fontSize: 14 }}>
+              {"★".repeat(Math.round(block.overallScore))}
+            </div>
+            <div style={{ color: t.text, opacity: 0.5, fontSize: 11 }}>
+              {block.totalReviews} reviews
+            </div>
+          </div>
+          <div
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              gap: 4,
+            }}
+          >
+            {block.breakdown.map((b, i) => (
+              <div
+                // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in canvas block rendering
+                key={i}
+                style={{ display: "flex", alignItems: "center", gap: 6 }}
+              >
+                <span style={{ color: t.text, fontSize: 11, width: 12 }}>
+                  {b.stars}
+                </span>
+                <div
+                  style={{
+                    flex: 1,
+                    background: t.bg,
+                    borderRadius: 4,
+                    height: 6,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${b.percent}%`,
+                      background: "#f59e0b",
+                      height: "100%",
+                      borderRadius: 4,
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div
+          style={{
+            border: `1px solid ${t.border}`,
+            borderRadius: 8,
+            padding: 12,
+          }}
+        >
+          <div style={{ color: "#f59e0b", fontSize: 12, marginBottom: 4 }}>
+            {"★".repeat(block.featuredReview.rating)}
+          </div>
+          <div
+            style={{
+              color: t.text,
+              fontSize: 12,
+              fontStyle: "italic",
+              opacity: 0.85,
+              marginBottom: 6,
+            }}
+          >
+            &ldquo;{block.featuredReview.text}&rdquo;
+          </div>
+          <div style={{ color: t.text, fontSize: 11, fontWeight: 600 }}>
+            — {block.featuredReview.author}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "product-card") {
+    return (
+      // biome-ignore lint/a11y/useKeyWithClickEvents: pre-existing pattern in canvas block rendering
+      <div
+        className={base}
+        onClick={onClick}
+        style={{
+          background: t.card,
+          padding: "24px",
+          border: selected ? "2px solid #6366f1" : "2px solid transparent",
+        }}
+      >
+        <h3
+          style={{
+            color: t.text,
+            fontWeight: 700,
+            fontSize: 16,
+            marginBottom: 16,
+            textAlign: "center",
+          }}
+        >
+          {block.heading}
+        </h3>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${Math.min(block.items.length, 3)}, 1fr)`,
+            gap: 12,
+          }}
+        >
+          {block.items.map((item, i) => (
+            <div
+              // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in canvas block rendering
+              key={i}
+              style={{
+                border: `1px solid ${t.border}`,
+                borderRadius: 10,
+                overflow: "hidden",
+              }}
+            >
+              <div style={{ background: item.color, height: 64 }} />
+              <div style={{ padding: "10px 12px" }}>
+                {item.badge && (
+                  <div
+                    style={{
+                      display: "inline-block",
+                      background: t.accent,
+                      color: "#fff",
+                      fontSize: 9,
+                      padding: "1px 6px",
+                      borderRadius: 4,
+                      marginBottom: 4,
+                    }}
+                  >
+                    {item.badge}
+                  </div>
+                )}
+                <div style={{ color: t.text, fontWeight: 600, fontSize: 13 }}>
+                  {item.name}
+                </div>
+                <div style={{ color: t.accent, fontWeight: 700, fontSize: 13 }}>
+                  {item.price}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "announcement-bar") {
+    return (
+      // biome-ignore lint/a11y/useKeyWithClickEvents: pre-existing pattern in canvas block rendering
+      <div
+        className={base}
+        onClick={onClick}
+        style={{
+          background: block.bgColor,
+          padding: "12px 24px",
+          border: selected ? "2px solid #6366f1" : "2px solid transparent",
+          borderRadius: 8,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8,
+        }}
+      >
+        <span style={{ fontSize: 16 }}>{block.emoji}</span>
+        <span style={{ color: block.textColor, fontSize: 14, fontWeight: 500 }}>
+          {block.message}
+        </span>
+        {block.linkText && (
+          <span
+            style={{
+              color: block.textColor,
+              fontSize: 13,
+              fontWeight: 700,
+              textDecoration: "underline",
+              cursor: "pointer",
+            }}
+          >
+            {block.linkText}
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  if (block.type === "columns-text") {
+    return (
+      // biome-ignore lint/a11y/useKeyWithClickEvents: pre-existing pattern in canvas block rendering
+      <div
+        className={base}
+        onClick={onClick}
+        style={{
+          background: t.card,
+          padding: "24px",
+          border: selected ? "2px solid #6366f1" : "2px solid transparent",
+        }}
+      >
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${block.columns}, 1fr)`,
+            gap: 20,
+          }}
+        >
+          {block.items.map((col, i) => (
+            <div
+              // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in canvas block rendering
+              key={i}
+              style={{ borderLeft: `3px solid ${t.accent}`, paddingLeft: 12 }}
+            >
+              <div
+                style={{
+                  color: t.text,
+                  fontWeight: 700,
+                  fontSize: 14,
+                  marginBottom: 6,
+                }}
+              >
+                {col.heading}
+              </div>
+              <div
+                style={{
+                  color: t.text,
+                  opacity: 0.65,
+                  fontSize: 12,
+                  lineHeight: 1.6,
+                }}
+              >
+                {col.body}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "table-block") {
+    return (
+      // biome-ignore lint/a11y/useKeyWithClickEvents: pre-existing pattern in canvas block rendering
+      <div
+        className={base}
+        onClick={onClick}
+        style={{
+          background: t.card,
+          padding: "16px 20px",
+          border: selected ? "2px solid #6366f1" : "2px solid transparent",
+        }}
+      >
+        {block.heading && (
+          <h3
+            style={{
+              color: t.text,
+              fontWeight: 700,
+              fontSize: 15,
+              marginBottom: 12,
+            }}
+          >
+            {block.heading}
+          </h3>
+        )}
+        <div style={{ overflowX: "auto" }}>
+          <table
+            style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}
+          >
+            <thead>
+              <tr style={{ background: t.bg }}>
+                {block.headers.map((h, i) => (
+                  <th
+                    // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in canvas block rendering
+                    key={i}
+                    style={{
+                      color: t.accent,
+                      padding: "8px 10px",
+                      textAlign: "left",
+                      borderBottom: `1px solid ${t.border}`,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {block.rows.map((row, ri) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in canvas block rendering
+                <tr key={ri} style={{ borderBottom: `1px solid ${t.border}` }}>
+                  {row.map((cell, ci) => (
+                    <td
+                      // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in canvas block rendering
+                      key={ci}
+                      style={{
+                        color: t.text,
+                        padding: "7px 10px",
+                        opacity: 0.85,
+                      }}
+                    >
+                      {cell}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "embed-html") {
+    return (
+      // biome-ignore lint/a11y/useKeyWithClickEvents: pre-existing pattern in canvas block rendering
+      <div
+        className={base}
+        onClick={onClick}
+        style={{
+          background: t.bg,
+          border: selected ? "2px solid #6366f1" : `2px dashed ${t.border}`,
+          borderRadius: 8,
+          padding: "20px 24px",
+          textAlign: "center",
+          minHeight: block.height,
+        }}
+      >
+        <div
+          style={{ color: t.text, opacity: 0.4, fontSize: 32, marginBottom: 8 }}
+        >
+          &#60;/&#62;
+        </div>
+        <div
+          style={{ color: t.text, opacity: 0.6, fontSize: 14, fontWeight: 600 }}
+        >
+          {block.label}
+        </div>
+        <div
+          style={{ color: t.text, opacity: 0.35, fontSize: 11, marginTop: 4 }}
+        >
+          Custom HTML embed
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "audio-player") {
+    return (
+      // biome-ignore lint/a11y/useKeyWithClickEvents: pre-existing pattern in canvas block rendering
+      <div
+        className={base}
+        onClick={onClick}
+        style={{
+          background: t.card,
+          padding: "20px 24px",
+          border: selected ? "2px solid #6366f1" : "2px solid transparent",
+          borderRadius: 12,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <div
+            style={{
+              width: 60,
+              height: 60,
+              borderRadius: 10,
+              background: block.coverColor,
+              flexShrink: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <span style={{ color: "#fff", fontSize: 24 }}>♪</span>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div
+              style={{
+                color: t.text,
+                fontWeight: 700,
+                fontSize: 15,
+                marginBottom: 2,
+              }}
+            >
+              {block.title}
+            </div>
+            <div style={{ color: t.text, opacity: 0.55, fontSize: 12 }}>
+              {block.artist}
+            </div>
+            <div
+              style={{
+                marginTop: 8,
+                background: t.bg,
+                borderRadius: 4,
+                height: 4,
+              }}
+            >
+              <div
+                style={{
+                  width: "40%",
+                  background: t.accent,
+                  height: "100%",
+                  borderRadius: 4,
+                }}
+              />
+            </div>
+          </div>
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              background: t.accent,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+            }}
+          >
+            <span style={{ color: "#fff", fontSize: 16, marginLeft: 2 }}>
+              ▶
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "portfolio-grid") {
+    return (
+      // biome-ignore lint/a11y/useKeyWithClickEvents: pre-existing pattern in canvas block rendering
+      <div
+        className={base}
+        onClick={onClick}
+        style={{
+          background: t.card,
+          padding: "24px",
+          border: selected ? "2px solid #6366f1" : "2px solid transparent",
+        }}
+      >
+        <h3
+          style={{
+            color: t.text,
+            fontWeight: 700,
+            fontSize: 16,
+            marginBottom: 12,
+            textAlign: "center",
+          }}
+        >
+          {block.heading}
+        </h3>
+        <div
+          style={{
+            display: "flex",
+            gap: 6,
+            marginBottom: 14,
+            flexWrap: "wrap",
+          }}
+        >
+          {block.categories.map((cat, i) => (
+            <span
+              // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in canvas block rendering
+              key={i}
+              style={{
+                padding: "3px 10px",
+                borderRadius: 20,
+                background: i === 0 ? t.accent : t.bg,
+                color: i === 0 ? "#fff" : t.text,
+                fontSize: 11,
+                fontWeight: 600,
+                border: `1px solid ${t.border}`,
+              }}
+            >
+              {cat}
+            </span>
+          ))}
+        </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr 1fr",
+            gap: 10,
+          }}
+        >
+          {block.items.map((item, i) => (
+            <div
+              // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in canvas block rendering
+              key={i}
+              style={{
+                background: item.color,
+                borderRadius: 8,
+                overflow: "hidden",
+                aspectRatio: "4/3",
+                position: "relative",
+                display: "flex",
+                alignItems: "flex-end",
+              }}
+            >
+              {item.src && (
+                <img
+                  src={item.src}
+                  alt={item.title}
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                  }}
+                />
+              )}
+              <div
+                style={{
+                  position: "relative",
+                  padding: "6px 8px",
+                  background: "rgba(0,0,0,0.4)",
+                  width: "100%",
+                }}
+              >
+                <div style={{ color: "#fff", fontSize: 10, fontWeight: 600 }}>
+                  {item.title}
+                </div>
+                <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 9 }}>
+                  {item.category}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     );
   }
 
@@ -4242,6 +5447,744 @@ function PropertiesPanel({
             Open by default
           </Label>
         </div>
+      </div>
+    );
+  }
+
+  if (block.type === "newsletter-signup") {
+    return (
+      <div className="p-4 space-y-4">
+        <h3 className="font-semibold text-foreground text-sm">
+          Newsletter Signup
+        </h3>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Heading</Label>
+          <Input
+            value={block.heading}
+            onChange={(e) => onChange({ ...block, heading: e.target.value })}
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Subtext</Label>
+          <Textarea
+            value={block.subtext}
+            onChange={(e) => onChange({ ...block, subtext: e.target.value })}
+            className="bg-input border-border text-sm resize-none"
+            rows={2}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Placeholder</Label>
+          <Input
+            value={block.placeholder}
+            onChange={(e) =>
+              onChange({ ...block, placeholder: e.target.value })
+            }
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Button Text</Label>
+          <Input
+            value={block.buttonText}
+            onChange={(e) => onChange({ ...block, buttonText: e.target.value })}
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Button Color</Label>
+          <div className="flex gap-2 items-center">
+            <input
+              type="color"
+              value={block.buttonColor}
+              onChange={(e) =>
+                onChange({ ...block, buttonColor: e.target.value })
+              }
+              className="w-8 h-8 rounded cursor-pointer border border-border"
+            />
+            <span className="text-xs text-muted-foreground">
+              {block.buttonColor}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "progress-bar") {
+    return (
+      <div className="p-4 space-y-4">
+        <h3 className="font-semibold text-foreground text-sm">Progress Bars</h3>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Heading</Label>
+          <Input
+            value={block.heading}
+            onChange={(e) => onChange({ ...block, heading: e.target.value })}
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        {block.items.map((item, i) => (
+          <div
+            // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in block renderer
+            key={i}
+            className="border border-border rounded-lg p-3 space-y-2"
+          >
+            <p className="text-xs font-medium text-muted-foreground">
+              Bar {i + 1}
+            </p>
+            <Input
+              value={item.label}
+              onChange={(e) => {
+                const items = [...block.items];
+                items[i] = { ...items[i], label: e.target.value };
+                onChange({ ...block, items });
+              }}
+              placeholder="Label"
+              className="bg-input border-border text-sm h-7"
+            />
+            <div className="flex gap-2 items-center">
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                value={item.percent}
+                onChange={(e) => {
+                  const items = [...block.items];
+                  items[i] = { ...items[i], percent: Number(e.target.value) };
+                  onChange({ ...block, items });
+                }}
+                placeholder="%"
+                className="bg-input border-border text-sm h-7 w-20"
+              />
+              <input
+                type="color"
+                value={item.color}
+                onChange={(e) => {
+                  const items = [...block.items];
+                  items[i] = { ...items[i], color: e.target.value };
+                  onChange({ ...block, items });
+                }}
+                className="w-8 h-7 rounded cursor-pointer border border-border"
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (block.type === "timeline") {
+    return (
+      <div className="p-4 space-y-4">
+        <h3 className="font-semibold text-foreground text-sm">Timeline</h3>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Heading</Label>
+          <Input
+            value={block.heading}
+            onChange={(e) => onChange({ ...block, heading: e.target.value })}
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        {block.items.map((item, i) => (
+          <div
+            // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in block renderer
+            key={i}
+            className="border border-border rounded-lg p-3 space-y-2"
+          >
+            <p className="text-xs font-medium text-muted-foreground">
+              Event {i + 1}
+            </p>
+            <Input
+              value={item.year}
+              onChange={(e) => {
+                const items = [...block.items];
+                items[i] = { ...items[i], year: e.target.value };
+                onChange({ ...block, items });
+              }}
+              placeholder="Year"
+              className="bg-input border-border text-sm h-7"
+            />
+            <Input
+              value={item.title}
+              onChange={(e) => {
+                const items = [...block.items];
+                items[i] = { ...items[i], title: e.target.value };
+                onChange({ ...block, items });
+              }}
+              placeholder="Title"
+              className="bg-input border-border text-sm h-7"
+            />
+            <Textarea
+              value={item.description}
+              onChange={(e) => {
+                const items = [...block.items];
+                items[i] = { ...items[i], description: e.target.value };
+                onChange({ ...block, items });
+              }}
+              placeholder="Description"
+              rows={2}
+              className="bg-input border-border text-sm resize-none"
+            />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (block.type === "before-after") {
+    return (
+      <div className="p-4 space-y-4">
+        <h3 className="font-semibold text-foreground text-sm">
+          Before & After
+        </h3>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Heading</Label>
+          <Input
+            value={block.heading}
+            onChange={(e) => onChange({ ...block, heading: e.target.value })}
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">
+              Before Label
+            </Label>
+            <Input
+              value={block.beforeLabel}
+              onChange={(e) =>
+                onChange({ ...block, beforeLabel: e.target.value })
+              }
+              className="bg-input border-border text-sm h-7"
+            />
+            <Textarea
+              value={block.beforeText}
+              onChange={(e) =>
+                onChange({ ...block, beforeText: e.target.value })
+              }
+              rows={2}
+              className="bg-input border-border text-sm resize-none"
+            />
+            <input
+              type="color"
+              value={block.beforeColor}
+              onChange={(e) =>
+                onChange({ ...block, beforeColor: e.target.value })
+              }
+              className="w-8 h-7 rounded cursor-pointer border border-border"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">After Label</Label>
+            <Input
+              value={block.afterLabel}
+              onChange={(e) =>
+                onChange({ ...block, afterLabel: e.target.value })
+              }
+              className="bg-input border-border text-sm h-7"
+            />
+            <Textarea
+              value={block.afterText}
+              onChange={(e) =>
+                onChange({ ...block, afterText: e.target.value })
+              }
+              rows={2}
+              className="bg-input border-border text-sm resize-none"
+            />
+            <input
+              type="color"
+              value={block.afterColor}
+              onChange={(e) =>
+                onChange({ ...block, afterColor: e.target.value })
+              }
+              className="w-8 h-7 rounded cursor-pointer border border-border"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "rating-review") {
+    return (
+      <div className="p-4 space-y-4">
+        <h3 className="font-semibold text-foreground text-sm">
+          Rating & Reviews
+        </h3>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Heading</Label>
+          <Input
+            value={block.heading}
+            onChange={(e) => onChange({ ...block, heading: e.target.value })}
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">
+              Overall Score
+            </Label>
+            <Input
+              type="number"
+              min={1}
+              max={5}
+              step={0.1}
+              value={block.overallScore}
+              onChange={(e) =>
+                onChange({ ...block, overallScore: Number(e.target.value) })
+              }
+              className="bg-input border-border text-sm h-7"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">
+              Total Reviews
+            </Label>
+            <Input
+              type="number"
+              value={block.totalReviews}
+              onChange={(e) =>
+                onChange({ ...block, totalReviews: Number(e.target.value) })
+              }
+              className="bg-input border-border text-sm h-7"
+            />
+          </div>
+        </div>
+        <div className="border border-border rounded-lg p-3 space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">
+            Featured Review
+          </p>
+          <Input
+            value={block.featuredReview.author}
+            onChange={(e) =>
+              onChange({
+                ...block,
+                featuredReview: {
+                  ...block.featuredReview,
+                  author: e.target.value,
+                },
+              })
+            }
+            placeholder="Author name"
+            className="bg-input border-border text-sm h-7"
+          />
+          <Textarea
+            value={block.featuredReview.text}
+            onChange={(e) =>
+              onChange({
+                ...block,
+                featuredReview: {
+                  ...block.featuredReview,
+                  text: e.target.value,
+                },
+              })
+            }
+            placeholder="Review text"
+            rows={2}
+            className="bg-input border-border text-sm resize-none"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "product-card") {
+    return (
+      <div className="p-4 space-y-4">
+        <h3 className="font-semibold text-foreground text-sm">Product Cards</h3>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Heading</Label>
+          <Input
+            value={block.heading}
+            onChange={(e) => onChange({ ...block, heading: e.target.value })}
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        {block.items.map((item, i) => (
+          <div
+            // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in block renderer
+            key={i}
+            className="border border-border rounded-lg p-3 space-y-2"
+          >
+            <p className="text-xs font-medium text-muted-foreground">
+              Product {i + 1}
+            </p>
+            <Input
+              value={item.name}
+              onChange={(e) => {
+                const items = [...block.items];
+                items[i] = { ...items[i], name: e.target.value };
+                onChange({ ...block, items });
+              }}
+              placeholder="Name"
+              className="bg-input border-border text-sm h-7"
+            />
+            <Input
+              value={item.price}
+              onChange={(e) => {
+                const items = [...block.items];
+                items[i] = { ...items[i], price: e.target.value };
+                onChange({ ...block, items });
+              }}
+              placeholder="Price"
+              className="bg-input border-border text-sm h-7"
+            />
+            <Input
+              value={item.badge ?? ""}
+              onChange={(e) => {
+                const items = [...block.items];
+                items[i] = { ...items[i], badge: e.target.value || undefined };
+                onChange({ ...block, items });
+              }}
+              placeholder="Badge (optional)"
+              className="bg-input border-border text-sm h-7"
+            />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (block.type === "announcement-bar") {
+    return (
+      <div className="p-4 space-y-4">
+        <h3 className="font-semibold text-foreground text-sm">
+          Announcement Bar
+        </h3>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Message</Label>
+          <Input
+            value={block.message}
+            onChange={(e) => onChange({ ...block, message: e.target.value })}
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Emoji</Label>
+          <Input
+            value={block.emoji}
+            onChange={(e) => onChange({ ...block, emoji: e.target.value })}
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">
+              Background Color
+            </Label>
+            <div className="flex gap-2 items-center">
+              <input
+                type="color"
+                value={block.bgColor}
+                onChange={(e) =>
+                  onChange({ ...block, bgColor: e.target.value })
+                }
+                className="w-8 h-7 rounded cursor-pointer border border-border"
+              />
+              <span className="text-xs text-muted-foreground">
+                {block.bgColor}
+              </span>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Text Color</Label>
+            <div className="flex gap-2 items-center">
+              <input
+                type="color"
+                value={block.textColor}
+                onChange={(e) =>
+                  onChange({ ...block, textColor: e.target.value })
+                }
+                className="w-8 h-7 rounded cursor-pointer border border-border"
+              />
+              <span className="text-xs text-muted-foreground">
+                {block.textColor}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Link Text</Label>
+          <Input
+            value={block.linkText ?? ""}
+            onChange={(e) => onChange({ ...block, linkText: e.target.value })}
+            placeholder="e.g. Learn more →"
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Link URL</Label>
+          <Input
+            value={block.link ?? ""}
+            onChange={(e) => onChange({ ...block, link: e.target.value })}
+            placeholder="https://..."
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "columns-text") {
+    return (
+      <div className="p-4 space-y-4">
+        <h3 className="font-semibold text-foreground text-sm">Columns Text</h3>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Columns</Label>
+          <select
+            value={block.columns}
+            onChange={(e) =>
+              onChange({ ...block, columns: Number(e.target.value) })
+            }
+            className="w-full bg-input border border-border rounded text-sm h-8 px-2 text-foreground"
+          >
+            <option value={2}>2 Columns</option>
+            <option value={3}>3 Columns</option>
+          </select>
+        </div>
+        {block.items.map((col, i) => (
+          <div
+            // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in block renderer
+            key={i}
+            className="border border-border rounded-lg p-3 space-y-2"
+          >
+            <p className="text-xs font-medium text-muted-foreground">
+              Column {i + 1}
+            </p>
+            <Input
+              value={col.heading}
+              onChange={(e) => {
+                const items = [...block.items];
+                items[i] = { ...items[i], heading: e.target.value };
+                onChange({ ...block, items });
+              }}
+              placeholder="Heading"
+              className="bg-input border-border text-sm h-7"
+            />
+            <Textarea
+              value={col.body}
+              onChange={(e) => {
+                const items = [...block.items];
+                items[i] = { ...items[i], body: e.target.value };
+                onChange({ ...block, items });
+              }}
+              placeholder="Body text"
+              rows={2}
+              className="bg-input border-border text-sm resize-none"
+            />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (block.type === "table-block") {
+    return (
+      <div className="p-4 space-y-4">
+        <h3 className="font-semibold text-foreground text-sm">Table</h3>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Heading</Label>
+          <Input
+            value={block.heading}
+            onChange={(e) => onChange({ ...block, heading: e.target.value })}
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">
+            Headers (comma separated)
+          </Label>
+          <Input
+            value={block.headers.join(",")}
+            onChange={(e) =>
+              onChange({
+                ...block,
+                headers: e.target.value.split(",").map((s) => s.trim()),
+              })
+            }
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        {block.rows.map((row, ri) => (
+          <div
+            // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in block renderer
+            key={ri}
+            className="border border-border rounded-lg p-2 space-y-1"
+          >
+            <p className="text-xs text-muted-foreground">Row {ri + 1}</p>
+            <Input
+              value={row.join(",")}
+              onChange={(e) => {
+                const rows = [...block.rows];
+                rows[ri] = e.target.value.split(",").map((s) => s.trim());
+                onChange({ ...block, rows });
+              }}
+              placeholder="cell1, cell2, ..."
+              className="bg-input border-border text-sm h-7"
+            />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (block.type === "embed-html") {
+    return (
+      <div className="p-4 space-y-4">
+        <h3 className="font-semibold text-foreground text-sm">Custom Embed</h3>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Label</Label>
+          <Input
+            value={block.label}
+            onChange={(e) => onChange({ ...block, label: e.target.value })}
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">HTML Code</Label>
+          <Textarea
+            value={block.html}
+            onChange={(e) => onChange({ ...block, html: e.target.value })}
+            rows={4}
+            className="bg-input border-border text-sm resize-none font-mono text-xs"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Height (px)</Label>
+          <Input
+            type="number"
+            value={block.height}
+            onChange={(e) =>
+              onChange({ ...block, height: Number(e.target.value) })
+            }
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "audio-player") {
+    return (
+      <div className="p-4 space-y-4">
+        <h3 className="font-semibold text-foreground text-sm">Audio Player</h3>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Title</Label>
+          <Input
+            value={block.title}
+            onChange={(e) => onChange({ ...block, title: e.target.value })}
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Artist</Label>
+          <Input
+            value={block.artist}
+            onChange={(e) => onChange({ ...block, artist: e.target.value })}
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Audio URL</Label>
+          <Input
+            value={block.audioUrl}
+            onChange={(e) => onChange({ ...block, audioUrl: e.target.value })}
+            placeholder="https://..."
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Cover Color</Label>
+          <div className="flex gap-2 items-center">
+            <input
+              type="color"
+              value={
+                block.coverColor.includes("gradient")
+                  ? "#6366f1"
+                  : block.coverColor
+              }
+              onChange={(e) =>
+                onChange({ ...block, coverColor: e.target.value })
+              }
+              className="w-8 h-7 rounded cursor-pointer border border-border"
+            />
+            <span className="text-xs text-muted-foreground">
+              Solid color or gradient
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "portfolio-grid") {
+    return (
+      <div className="p-4 space-y-4">
+        <h3 className="font-semibold text-foreground text-sm">
+          Portfolio Grid
+        </h3>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Heading</Label>
+          <Input
+            value={block.heading}
+            onChange={(e) => onChange({ ...block, heading: e.target.value })}
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">
+            Categories (comma separated)
+          </Label>
+          <Input
+            value={block.categories.join(",")}
+            onChange={(e) =>
+              onChange({
+                ...block,
+                categories: e.target.value.split(",").map((s) => s.trim()),
+              })
+            }
+            className="bg-input border-border text-sm h-8"
+          />
+        </div>
+        {block.items.map((item, i) => (
+          <div
+            // biome-ignore lint/suspicious/noArrayIndexKey: pre-existing pattern in block renderer
+            key={i}
+            className="border border-border rounded-lg p-2 space-y-2"
+          >
+            <p className="text-xs text-muted-foreground">Item {i + 1}</p>
+            <Input
+              value={item.title}
+              onChange={(e) => {
+                const items = [...block.items];
+                items[i] = { ...items[i], title: e.target.value };
+                onChange({ ...block, items });
+              }}
+              placeholder="Title"
+              className="bg-input border-border text-sm h-7"
+            />
+            <Input
+              value={item.category}
+              onChange={(e) => {
+                const items = [...block.items];
+                items[i] = { ...items[i], category: e.target.value };
+                onChange({ ...block, items });
+              }}
+              placeholder="Category"
+              className="bg-input border-border text-sm h-7"
+            />
+            <ImageUploadButton
+              onUpload={(src) => {
+                const items = [...block.items];
+                items[i] = { ...items[i], src };
+                onChange({ ...block, items });
+              }}
+              label="Upload Photo"
+              currentSrc={item.src}
+            />
+          </div>
+        ))}
       </div>
     );
   }

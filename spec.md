@@ -1,36 +1,65 @@
-# SiteForge
+# SiteForge - Builder Expansion & Bank Transaction Enhancements
 
 ## Current State
-
-The Visual Site Builder (`BuilderPage.tsx`) has an AI panel with two sub-modes:
-- **Search mode**: Filters 10+ pre-built templates by keyword and applies them to the canvas.
-- **Chat mode**: A simulated AI chat using a local `getAiResponse()` function (pure keyword-matching, ~600ms fake delay). No real AI API is called anywhere in the builder.
-
-The `AiChatPanel` component (lines 4584–4971) uses `sendMessage` which calls `getAiResponse()` synchronously with a `setTimeout`, then applies hardcoded template blocks based on pattern matching.
+- Builder supports 27 block types across 7 categories (Layout, Text, Media, Interactive, Content, People & Social, Commerce)
+- TransactionDetailModal shows basic fields: Transaction ID, Date, Price, Site ID, Status, Bill of Sale
+- Dashboard Transactions tab shows a simple table: Site, Role, Price, Status, Date, Action (view details)
+- ChatTab has PhonePe-style payment flow with PIN verification and UPI deep links
 
 ## Requested Changes (Diff)
 
 ### Add
-- Real AI integration in the Chat mode of `AiChatPanel` using Google Gemini (via the `@google/generative-ai` SDK available in the browser, or a direct `fetch` to the Gemini REST API)
-- The AI receives the user's prompt and generates a full website layout by returning a JSON array of block configurations matching the existing block types (hero, features, text, image, button, etc.)
-- A system prompt that instructs the AI about the available block types and their properties, so it can construct real website layouts
-- Loading/streaming indicator while AI is generating
-- Graceful fallback to the existing keyword-matching logic if the AI call fails
-- A visible "Powered by Gemini AI" label in the chat panel to show it's a real AI
+**Builder - New Block Types:**
+1. `newsletter-signup` - Email signup form with heading, subtext, and submit button (Commerce category)
+2. `progress-bar` - Skill/progress bar component with multiple items and percentages (Content category)
+3. `timeline` - Vertical timeline/history section with date, title, and description items (Content category)
+4. `before-after` - Side-by-side comparison block (before/after image or text) (Interactive category)
+5. `rating-review` - Star rating display with review summary and score (People & Social)
+6. `product-card` - Product card grid with image, name, price, and add-to-cart button (Commerce)
+7. `announcement-bar` - Top-of-page sticky marquee/announcement strip (Layout)
+8. `columns-text` - Multi-column text layout (2 or 3 columns) (Layout)
+9. `table-block` - Simple HTML table with header row and data rows (Content)
+10. `embed-html` - Custom HTML/iFrame embed for third-party widgets (Interactive)
+11. `audio-player` - Audio embed with a SoundCloud/direct URL player (Media)
+12. `portfolio-grid` - Masonry/grid portfolio with category filter chips (Media)
+
+**Bank Transaction Enhancements:**
+1. **Transaction Detail Modal** - Upgrade with:
+   - INR amount display alongside USD
+   - Payment method badge (PhonePe, Stripe, ICP, PayPal, FamPay)
+   - Transaction timeline/steps (Initiated → Payment Received → Transfer → Completed)
+   - Copy Transaction ID button
+   - "Download Receipt" button (generates printable HTML receipt)
+   - QR code placeholder for transaction reference
+   - Animated status indicators
+2. **Dashboard Transactions Tab** - Enhance with:
+   - Stats row: Total spent, Total earned, Total transactions count
+   - Filter bar: All / Purchases / Sales / Pending / Completed tabs
+   - Search bar to filter by site name or transaction ID
+   - INR column alongside USD
+   - Payment method icon in each row
+   - Export to CSV button
+   - Empty state with illustration and CTA to browse marketplace
+3. **Transaction Receipt Component** - New printable receipt dialog:
+   - SiteForge branded header
+   - All transaction fields
+   - Digital Bill of Sale text
+   - Print/Download PDF button
 
 ### Modify
-- `sendMessage` in `AiChatPanel`: replace the `setTimeout + getAiResponse()` pattern with an async `fetch` to Gemini REST API, parse the JSON block array from the response, and call `onSetBlocks` with the generated blocks
-- The AI chat greeting message to reflect that it's now powered by a real AI
-- Quick chip suggestions to better match what the AI can handle
+- `BuilderPage.tsx` - Add 12 new block types to SECTION_TYPES, createBlock factory, BlockPreview renderers, and Properties panels
+- `TransactionDetailModal.tsx` - Full redesign with timeline, INR, copy button, receipt download
+- `DashboardPage.tsx` - Enhanced transactions tab with stats, filters, search, export
 
 ### Remove
-- The fake 600ms `setTimeout` delay for AI responses (replaced by actual async API call)
+- Nothing removed
 
 ## Implementation Plan
-
-1. Add a `GEMINI_API_KEY` constant (using the free public Gemini API) and a `callGeminiAI` async function in `BuilderPage.tsx`
-2. Build a system prompt that describes all available block types (hero, features, text-content, image-text, cta, testimonials, pricing, faq, footer, gallery, team, contact-form, video-embed, map-embed, countdown, accordion, icon-text, social-links, stats, banner, pull-quote, code-snippet, rich-text, spacer) and their key properties
-3. The AI returns a JSON array of blocks; parse it and call `onSetBlocks` to apply the generated layout
-4. Update `sendMessage` to be async, show a real typing indicator, call `callGeminiAI`, and handle errors with a fallback to `getAiResponse()`
-5. Add a "Powered by Gemini AI ✨" badge in the chat panel header
-6. Update the chat panel greeting text to reflect real AI capability
+1. Add 12 new block type TypeScript interfaces in BuilderPage.tsx
+2. Register all 12 in SECTION_TYPES constant with proper categories
+3. Add createBlock() factory cases for all 12
+4. Add BlockPreview canvas renderers for all 12
+5. Add Properties panel editors for all 12
+6. Redesign TransactionDetailModal with timeline, INR, copy button, receipt download
+7. Enhance DashboardPage Transactions tab with stats row, filter tabs, search, export CSV
+8. Validate build

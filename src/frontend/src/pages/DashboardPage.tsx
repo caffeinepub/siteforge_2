@@ -15,11 +15,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
+  ArrowDownCircle,
+  ArrowUpCircle,
   CheckCircle,
   Clock,
   Copy,
+  Download,
   Edit,
   ExternalLink,
+  Filter,
   Globe,
   IndianRupee,
   KeyRound,
@@ -29,12 +33,14 @@ import {
   MessageCircle,
   Plus,
   Receipt,
+  Search,
   Settings,
   Shield,
   ShoppingBag,
   Smartphone,
   Tag,
   Trash2,
+  TrendingUp,
   XCircle,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -94,20 +100,350 @@ function getSiteStatusBadge(site: Site) {
   }
 }
 
-function getTxStatusIcon(tx: Transaction) {
-  if (tx.status.__kind__ === "completed")
-    return <CheckCircle className="w-4 h-4 text-green-400" />;
-  if (tx.status.__kind__ === "pending")
-    return <Clock className="w-4 h-4 text-yellow-400" />;
-  return <XCircle className="w-4 h-4 text-red-400" />;
-}
-
 function formatDate(ts: bigint) {
   return new Date(Number(ts) / 1_000_000).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
+}
+
+const USD_TO_INR = 83.5;
+
+type TxFilter = "all" | "purchases" | "sales" | "pending" | "completed";
+
+function TransactionsPanel({
+  transactions,
+  isLoading,
+  myPrincipal,
+  onViewTx,
+}: {
+  transactions: import("../backend").Transaction[];
+  isLoading: boolean;
+  myPrincipal: string;
+  onViewTx: (tx: import("../backend").Transaction) => void;
+}) {
+  const [filter, setFilter] = useState<TxFilter>("all");
+  const [search, setSearch] = useState("");
+
+  const totalSpent = transactions
+    .filter((t) => t.buyer.toString() === myPrincipal)
+    .reduce((sum, t) => sum + Number(t.price) / 100, 0);
+  const totalEarned = transactions
+    .filter((t) => t.seller.toString() === myPrincipal)
+    .reduce((sum, t) => sum + Number(t.price) / 100, 0);
+
+  const filtered = transactions.filter((tx) => {
+    const role = tx.buyer.toString() === myPrincipal ? "Buyer" : "Seller";
+    const matchFilter =
+      filter === "all" ||
+      (filter === "purchases" && role === "Buyer") ||
+      (filter === "sales" && role === "Seller") ||
+      (filter === "pending" && tx.status.__kind__ === "pending") ||
+      (filter === "completed" && tx.status.__kind__ === "completed");
+    const q = search.toLowerCase();
+    const matchSearch =
+      !q ||
+      tx.id.toLowerCase().includes(q) ||
+      tx.siteId.toLowerCase().includes(q);
+    return matchFilter && matchSearch;
+  });
+
+  const handleExportCSV = () => {
+    const headers = ["ID", "Site ID", "Role", "USD", "INR", "Status", "Date"];
+    const rows = transactions.map((tx) => {
+      const role = tx.buyer.toString() === myPrincipal ? "Buyer" : "Seller";
+      const usd = (Number(tx.price) / 100).toFixed(2);
+      const inr = ((Number(tx.price) / 100) * USD_TO_INR).toFixed(2);
+      const date = new Date(Number(tx.createdAt) / 1_000_000).toISOString();
+      return [
+        tx.id,
+        tx.siteId,
+        role,
+        `$${usd}`,
+        `₹${inr}`,
+        tx.status.__kind__,
+        date,
+      ].join(",");
+    });
+    const csv = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "siteforge-transactions.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        <div className="grid grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-24 rounded-xl bg-card" />
+          ))}
+        </div>
+        <Skeleton className="h-64 rounded-xl bg-card" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* Stats Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="card-glow bg-card rounded-xl border border-border p-4 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+            <ArrowDownCircle className="w-5 h-5 text-blue-400" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Total Spent</p>
+            <p className="text-xl font-bold text-foreground">
+              ${totalSpent.toFixed(2)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              ≈ ₹
+              {(totalSpent * USD_TO_INR).toLocaleString("en-IN", {
+                maximumFractionDigits: 0,
+              })}
+            </p>
+          </div>
+        </div>
+        <div className="card-glow bg-card rounded-xl border border-border p-4 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
+            <ArrowUpCircle className="w-5 h-5 text-green-400" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Total Earned</p>
+            <p className="text-xl font-bold text-foreground">
+              ${totalEarned.toFixed(2)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              ≈ ₹
+              {(totalEarned * USD_TO_INR).toLocaleString("en-IN", {
+                maximumFractionDigits: 0,
+              })}
+            </p>
+          </div>
+        </div>
+        <div className="card-glow bg-card rounded-xl border border-border p-4 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center shrink-0">
+            <TrendingUp className="w-5 h-5 text-purple-400" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Total Transactions</p>
+            <p className="text-xl font-bold text-foreground">
+              {transactions.length}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {
+                transactions.filter((t) => t.status.__kind__ === "completed")
+                  .length
+              }{" "}
+              completed
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Toolbar */}
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+        {/* Filter tabs */}
+        <div
+          className="flex gap-1 flex-wrap"
+          data-ocid="dashboard.transactions.filter.tab"
+        >
+          {(
+            ["all", "purchases", "sales", "pending", "completed"] as TxFilter[]
+          ).map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setFilter(f)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg capitalize transition-colors ${
+                filter === f
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-card text-muted-foreground border border-border hover:text-foreground"
+              }`}
+              data-ocid={`dashboard.transactions.${f}.tab`}
+            >
+              {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-2 w-full sm:w-auto">
+          {/* Search */}
+          <div className="relative flex-1 sm:w-52">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search by ID or site..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full bg-card border border-border rounded-lg pl-8 pr-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              data-ocid="dashboard.transactions.search_input"
+            />
+          </div>
+          {/* Export CSV */}
+          {transactions.length > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-border text-muted-foreground hover:text-foreground gap-1.5 shrink-0"
+              onClick={handleExportCSV}
+              data-ocid="dashboard.transactions.export.button"
+            >
+              <Download className="w-3.5 h-3.5" />
+              CSV
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Table or empty state */}
+      {!transactions.length ? (
+        <div
+          className="text-center py-20 card-glow bg-card rounded-xl border border-border"
+          data-ocid="dashboard.transactions.empty_state"
+        >
+          <Receipt className="w-14 h-14 text-muted-foreground/40 mx-auto mb-4" />
+          <h3 className="font-semibold text-foreground mb-2">
+            No transactions yet
+          </h3>
+          <p className="text-muted-foreground text-sm max-w-xs mx-auto">
+            Browse the Marketplace to buy your first website and it will appear
+            here.
+          </p>
+          <Button variant="outline" className="mt-4 border-border" asChild>
+            <a href="/marketplace">Browse Marketplace →</a>
+          </Button>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div
+          className="text-center py-16 card-glow bg-card rounded-xl border border-border"
+          data-ocid="dashboard.transactions.empty_state"
+        >
+          <Filter className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+          <p className="text-muted-foreground text-sm">
+            No transactions match this filter.
+          </p>
+        </div>
+      ) : (
+        <div className="card-glow bg-card rounded-xl border border-border overflow-hidden">
+          <div className="overflow-x-auto">
+            <Table data-ocid="dashboard.transactions.table">
+              <TableHeader>
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableHead className="text-muted-foreground">Site</TableHead>
+                  <TableHead className="text-muted-foreground">Role</TableHead>
+                  <TableHead className="text-muted-foreground">USD</TableHead>
+                  <TableHead className="text-muted-foreground hidden sm:table-cell">
+                    INR
+                  </TableHead>
+                  <TableHead className="text-muted-foreground">
+                    Status
+                  </TableHead>
+                  <TableHead className="text-muted-foreground hidden sm:table-cell">
+                    Date
+                  </TableHead>
+                  <TableHead className="text-muted-foreground">
+                    Action
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((tx, i) => {
+                  const role =
+                    tx.buyer.toString() === myPrincipal ? "Buyer" : "Seller";
+                  const usdAmt = Number(tx.price) / 100;
+                  const inrAmt = usdAmt * USD_TO_INR;
+                  const isCompleted = tx.status.__kind__ === "completed";
+                  const isPending = tx.status.__kind__ === "pending";
+                  return (
+                    <TableRow
+                      key={tx.id}
+                      className="border-border cursor-pointer hover:bg-accent/30"
+                      data-ocid={`dashboard.transactions.row.${i + 1}`}
+                      onClick={() => onViewTx(tx)}
+                    >
+                      <TableCell className="text-foreground font-medium text-sm">
+                        {tx.siteId.slice(0, 10)}...
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          className={
+                            role === "Buyer"
+                              ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
+                              : "bg-green-500/20 text-green-400 border-green-500/30"
+                          }
+                        >
+                          {role === "Buyer" ? (
+                            <ArrowDownCircle className="w-3 h-3 mr-1" />
+                          ) : (
+                            <ArrowUpCircle className="w-3 h-3 mr-1" />
+                          )}
+                          {role}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-foreground font-semibold">
+                        ${usdAmt.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm hidden sm:table-cell">
+                        ₹
+                        {inrAmt.toLocaleString("en-IN", {
+                          maximumFractionDigits: 0,
+                        })}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          {isCompleted ? (
+                            <span className="relative flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-green-500 block" />
+                              <span className="text-sm text-green-400 capitalize">
+                                Completed
+                              </span>
+                            </span>
+                          ) : isPending ? (
+                            <span className="flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse block" />
+                              <span className="text-sm text-yellow-400 capitalize">
+                                Pending
+                              </span>
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-red-500 block" />
+                              <span className="text-sm text-red-400 capitalize">
+                                Cancelled
+                              </span>
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm hidden sm:table-cell">
+                        {formatDate(tx.createdAt)}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-xs text-primary"
+                          data-ocid={`dashboard.transactions.row.${i + 1}.button`}
+                        >
+                          View
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function DashboardPage() {
@@ -495,106 +831,12 @@ function DashboardContent() {
 
           {/* Transactions Tab */}
           <TabsContent value="transactions">
-            {dashLoading ? (
-              <Skeleton className="h-64 rounded-xl bg-card" />
-            ) : !dashboard?.transactions?.length ? (
-              <div
-                className="text-center py-20 card-glow bg-card rounded-xl border border-border"
-                data-ocid="dashboard.transactions.empty_state"
-              >
-                <Receipt className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="font-semibold text-foreground mb-2">
-                  No transactions yet
-                </h3>
-                <p className="text-muted-foreground text-sm">
-                  Your purchase and sales history will appear here.
-                </p>
-              </div>
-            ) : (
-              <div className="card-glow bg-card rounded-xl border border-border overflow-hidden">
-                <div className="overflow-x-auto">
-                  <Table data-ocid="dashboard.transactions.table">
-                    <TableHeader>
-                      <TableRow className="border-border hover:bg-transparent">
-                        <TableHead className="text-muted-foreground">
-                          Site
-                        </TableHead>
-                        <TableHead className="text-muted-foreground">
-                          Role
-                        </TableHead>
-                        <TableHead className="text-muted-foreground">
-                          Price
-                        </TableHead>
-                        <TableHead className="text-muted-foreground">
-                          Status
-                        </TableHead>
-                        <TableHead className="text-muted-foreground hidden sm:table-cell">
-                          Date
-                        </TableHead>
-                        <TableHead className="text-muted-foreground">
-                          Action
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {dashboard.transactions.map((tx, i) => {
-                        const role =
-                          tx.buyer.toString() === myPrincipal
-                            ? "Buyer"
-                            : "Seller";
-                        return (
-                          <TableRow
-                            key={tx.id}
-                            className="border-border cursor-pointer hover:bg-accent/30"
-                            data-ocid={`dashboard.transactions.row.${i + 1}`}
-                            onClick={() => setTxModal(tx)}
-                          >
-                            <TableCell className="text-foreground font-medium text-sm">
-                              {tx.siteId.slice(0, 12)}...
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                className={
-                                  role === "Buyer"
-                                    ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
-                                    : "bg-green-500/20 text-green-400 border-green-500/30"
-                                }
-                              >
-                                {role}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-foreground">
-                              ${(Number(tx.price) / 100).toFixed(2)}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1.5">
-                                {getTxStatusIcon(tx)}
-                                <span className="text-sm capitalize">
-                                  {tx.status.__kind__}
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-muted-foreground text-sm hidden sm:table-cell">
-                              {formatDate(tx.createdAt)}
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="text-xs text-primary"
-                                data-ocid={`dashboard.transactions.row.${i + 1}.button`}
-                              >
-                                View
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            )}
+            <TransactionsPanel
+              transactions={dashboard?.transactions ?? []}
+              isLoading={dashLoading}
+              myPrincipal={myPrincipal}
+              onViewTx={setTxModal}
+            />
           </TabsContent>
 
           {/* Settings Tab */}
