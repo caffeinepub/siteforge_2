@@ -17,6 +17,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
+  Bell,
+  BellOff,
   CheckCircle2,
   IndianRupee,
   MessageCircle,
@@ -46,6 +48,12 @@ import {
   useSendMessage,
   useUnreadMessageCount,
 } from "../hooks/useQueries";
+import {
+  getNotificationPermission,
+  isNotificationSupported,
+  requestNotificationPermission,
+  sendBrowserNotification,
+} from "../lib/browserNotifications";
 import {
   isSoundEnabled,
   playMessageSound,
@@ -887,6 +895,49 @@ function SoundToggle() {
   );
 }
 
+// ─── NotificationPermissionButton ────────────────────────────────────────────
+
+function NotificationPermissionButton() {
+  const [permission, setPermission] = useState<
+    NotificationPermission | "unsupported"
+  >(() => getNotificationPermission());
+
+  if (!isNotificationSupported()) return null;
+  if (permission === "granted") return null;
+
+  const handleClick = async () => {
+    if (permission === "denied") return;
+    const granted = await requestNotificationPermission();
+    setPermission(granted ? "granted" : "denied");
+  };
+
+  const isDenied = permission === "denied";
+  const title = isDenied
+    ? "Notifications blocked in browser settings"
+    : "Enable browser notifications";
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      title={title}
+      disabled={isDenied}
+      className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+        isDenied
+          ? "text-muted-foreground/30 cursor-not-allowed"
+          : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+      }`}
+      data-ocid="chat.notification_permission.button"
+    >
+      {isDenied ? (
+        <BellOff className="w-4 h-4" />
+      ) : (
+        <Bell className="w-4 h-4" />
+      )}
+    </button>
+  );
+}
+
 // ─── ChatWindow ───────────────────────────────────────────────────────────────
 
 interface ChatWindowProps {
@@ -927,13 +978,36 @@ function ChatWindow({ partner, myPrincipal, onBack }: ChatWindowProps) {
         );
         if (hasPayment) {
           playPaymentSound();
+          const amount = newMsgs.find(
+            (m) =>
+              m.sender.toString() !== myPrincipal &&
+              extractPaymentAmount(m.content) !== null,
+          );
+          const amtVal = amount ? extractPaymentAmount(amount.content) : null;
+          sendBrowserNotification(
+            `Payment request from ${partnerName}`,
+            amtVal !== null
+              ? `\u20B9${amtVal} payment request`
+              : "Payment request",
+            `pay-${partnerPrincipal}`,
+          );
         } else {
           playMessageSound();
+          const preview = newMsgs
+            .filter((m) => m.sender.toString() !== myPrincipal)
+            .map((m) => m.content)
+            .join(" ")
+            .slice(0, 80);
+          sendBrowserNotification(
+            `New message from ${partnerName}`,
+            preview || "New message",
+            `chat-${partnerPrincipal}`,
+          );
         }
       }
     }
     prevMsgCountRef.current = current;
-  }, [messages, myPrincipal]);
+  }, [messages, myPrincipal, partnerName, partnerPrincipal]);
 
   const partnerVerified = isVerified(partnerPrincipal);
 
@@ -1024,6 +1098,7 @@ function ChatWindow({ partner, myPrincipal, onBack }: ChatWindowProps) {
           </p>
         </div>
         <SoundToggle />
+        <NotificationPermissionButton />
         <Button
           size="sm"
           variant="outline"
@@ -1215,12 +1290,52 @@ function ChatWindow({ partner, myPrincipal, onBack }: ChatWindowProps) {
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={`Message ${partnerName}... (type a number like 99 to request payment)`}
+            placeholder={`Message ${partnerName}...`}
             rows={1}
             className="bg-input border-border resize-none min-h-[40px] max-h-[120px] text-sm"
             style={{ height: "auto", overflowY: "auto" }}
             data-ocid="chat.message.input"
           />
+          {/* Pay button — shown when typed message is a number */}
+          {extractPaymentAmount(messageText) !== null && (
+            <button
+              type="button"
+              onClick={() => {
+                const amount = extractPaymentAmount(messageText)!;
+                const myUPI = loadMyPhonePeUPI(myPrincipal);
+                const myPIN = loadPhonePePIN(myPrincipal);
+                if (myUPI && myPIN && recipientPhonePe) {
+                  // Fast path: launch PhonePe directly
+                  const commission = amount * COMMISSION_RATE;
+                  const recipientReceives = amount - commission;
+                  const recipientUPI = recipientPhonePe.includes("@")
+                    ? recipientPhonePe
+                    : `${recipientPhonePe}@ybl`;
+                  const name = encodeURIComponent(partnerName);
+                  const note = encodeURIComponent(
+                    `SiteForge payment to ${partnerName}`,
+                  );
+                  const upiLink = `upi://pay?pa=${encodeURIComponent(recipientUPI)}&pn=${name}&am=${recipientReceives.toFixed(2)}&cu=INR&tn=${note}`;
+                  window.location.href = upiLink;
+                  toast.success(
+                    `Opening PhonePe to pay ₹${recipientReceives.toFixed(2)} to ${partnerName}`,
+                  );
+                } else {
+                  // Fallback: open dialog (link UPI / set PIN first)
+                  setPayDialogAmount(amount);
+                }
+              }}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-[#5f259f] to-[#8b44d4] hover:opacity-90 active:scale-95 transition-all text-white text-xs font-bold shadow-md shrink-0 h-10 whitespace-nowrap"
+              data-ocid="chat.input.phonepe_pay.button"
+            >
+              <div className="w-4 h-4 rounded-full bg-white flex items-center justify-center">
+                <span className="text-[#5f259f] font-black text-[9px] leading-none">
+                  P
+                </span>
+              </div>
+              Pay ₹{extractPaymentAmount(messageText)}
+            </button>
+          )}
           <Button
             onClick={handleSend}
             disabled={!messageText.trim() || sendMessage.isPending}
@@ -1231,8 +1346,8 @@ function ChatWindow({ partner, myPrincipal, onBack }: ChatWindowProps) {
           </Button>
         </div>
         <p className="text-[10px] text-muted-foreground/40 mt-1.5">
-          Press Enter to send · Shift+Enter for new line · Send a number to
-          request PhonePe payment
+          Press Enter to send · Shift+Enter for new line · Type a number to pay
+          via PhonePe
         </p>
       </div>
 
@@ -1281,6 +1396,11 @@ export default function ChatTab() {
     const prev = prevUnreadRef.current;
     if (unreadTotal > prev && !selectedUser) {
       playMessageSound();
+      sendBrowserNotification(
+        "New message",
+        "You have a new unread message",
+        "chat-unread",
+      );
     }
     prevUnreadRef.current = unreadTotal;
   }, [unreadTotal, selectedUser]);
